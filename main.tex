@@ -1,0 +1,165 @@
+%\documentclass{cwpreport} % for review/editing/polishing
+%\linespread{1.5}           % for review/editing/polishing
+\documentclass[onecolumn]{cwpreport} % for final draft
+
+% Packages used by default CWP reports built by M8R
+\usepackage{times,natbib,amsmath,graphicx,color,amssymb,amsbsy,lineno,setspace,algorithm2e,lipsum}
+
+\usepackage[justification=centering]{caption} % Permite centrar los pies de figura
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{caption}
+
+
+% Specific paper formatting for CWP report
+\setlength{\paperwidth}{8.5in}
+\setlength{\paperheight}{11.0in}
+\setlength{\topmargin}{-0.25in}
+\setlength{\textheight}{8.75in}
+\setlength{\textwidth}{6.5in}
+\setlength{\oddsidemargin}{+.015625in}
+\setlength{\evensidemargin}{+.015625in}
+
+% Final draft only
+% \title[Short Title]{Aprendizaje auto-supervisado de
+% representaciones visuales con SimCLR y
+% evaluación mediante linear probing}
+\title[]{Deep Reinforcement Learning with Value Function Approximation of the Q-Action}
+% for editing/reviewing
+%\title{Measuring wave propagation through an open-pit mine using stereo videos} 
+%\righthead{training data}
+%\lefthead{Rapstine & Sava}
+
+% Final draft only
+\author[]{José Ridruejo Tuñón, Joaquín Mir Macías \& Francisco Javier Ríos 
+\\
+Deep Reinforcement Learning} 
+
+% --- CORRECCIÓN DE MÁRGENES DEL ABSTRACT ---
+\makeatletter
+\renewcommand{\left@zm}{0pt} % Elimina el margen izquierdo de 10.5pc
+\makeatother
+% -------------------------------------------
+
+\makeatletter
+\newenvironment{Repository}{%
+    \list{}{%
+        \labelwidth\z@ \labelsep\z@
+        \leftmargin\left@zm \rightmargin\z@
+        \parsep 0pt plus 1pt
+    }%
+    \item[]\reset@font\large{\bf Repository: }
+}{%
+    \endlist
+}
+\makeatother
+
+% --- CONFIGURACIÓN DE ENCABEZADO Y PIE DE PÁGINA ---
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{} % Borra todos los encabezados y pies de página actuales
+
+% Quitar la línea horizontal del encabezado
+\renewcommand{\headrulewidth}{0pt} 
+
+% Poner el número de página en el centro del pie de página
+\fancyfoot[C]{\thepage} 
+
+% Para que la primera página (la del título) también tenga el número abajo
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \fancyfoot[C]{\thepage}
+  \renewcommand{\headrulewidth}{0pt}
+}
+% ---------------------------------------------------
+
+% --- Centrado Descripción Imagen ---
+% \makeatletter
+% \long\def\GJ@makefigurecaption#1#2{\vskip 6pt
+%  \setbox\@tempboxa\hbox{\reset@font\small{\bf #1.} #2}
+%  \ifdim \wd\@tempboxa >\hsize
+%   % Si el texto es largo, lo metemos en una caja centrada
+%   \parbox{\hsize}{\centering\reset@font\small{\bf #1.} #2\par}
+%  \else
+%    % Si es corto (una línea), lo centra (esto ya lo hacía la clase original)
+%    \ifst@rredfloat
+%      \hbox to\hsize{\hfill\box\@tempboxa\hfill}
+%    \else
+%      \hbox to\hsize{\hfil\box\@tempboxa\hfil}
+%    \fi
+%  \fi
+%  \vskip 6pt
+% }
+% \makeatother
+% ------
+%\author{Thomas Rapstine, Paul Sava, Ashley Grant, \& Jeff Shragge}
+\begin{document}
+
+\maketitle
+
+% Uncomment for final draft only
+%\setcounter{page}{285}
+\journal{}
+
+%% ------------------------------------------------------------
+\begin{abstract}
+    This work investigates Deep Reinforcement Learning (DRL) methods based on action-value function approximation in visually rich continuous control environments. Using MuJoCo tasks from the DeepMind Control Suite accessed via Gymnasium, we study locomotion and obstacle avoidance problems where the agent observes only RGB images instead of low-dimensional state vectors. As a baseline, we implement a Deep Q-Network (DQN) with a convolutional encoder followed by fully connected layers that jointly learn a visual state representation and an approximate Q-function over a discretized action space. We then extend this baseline to Rainbow DQN by incorporating key algorithmic improvements such as Double Q-learning, Prioritized Experience Replay, Dueling architecture, n-step returns, Distributional RL, and Noisy Networks. Through a series of experiments, we compare DQN and Rainbow in terms of sample efficiency, learning stability, and exploratory behavior in locomotion tasks. We further perform an ablation study on selected Rainbow components to quantify their individual impact, and finally evaluate both agents in obstacle-rich environments where agents must both move forward and avoid collisions. The results provide empirical insight into the benefits and limitations of advanced DQN variants in complex visual control settings, and help develop critical experimental criteria for DRL in continuous control.
+\end{abstract}
+
+\begin{keywords}
+    Deep Reinforcement Learning, Deep Q-Network, Rainbow DQN, MuJoCo, DeepMind Control Suite, Gymnasium, Visual Control, Continuous Control, Locomotion, Obstacle Avoidance
+\end{keywords}
+
+%% ------------------------------------------------------------
+\begin{Repository}
+    \url{https://github.com/pepert03/DQN-Rainbow-Pixel-Control}
+\end{Repository}
+
+\section{Introduction}
+
+\subsection{Deep Q-Networks Fundamentals}
+
+Deep Reinforcement Learning (DRL) deals with high-dimensional state spaces, such as images, which are not feasibly handled with traditional RL methods.
+
+\subsection{Rainbow DQN}
+
+\subsection{Environments: MuJoCo and Deepmind Control Suite}
+
+\subsection{Environments Framework: Gymnasium}
+
+\section{Traveling via DQN}
+
+\subsection{Methodology}
+
+\subsection{Results and Discussion}
+
+\subsection{Conclusions}
+
+\section{Traveling via Rainbow-DQN}
+
+\subsection{Methodology}
+
+\subsection{Results and Discussion}
+
+\subsection{Conclusions}
+
+\section{Ablation Study of Rainbow-DQN}
+
+\subsection{Methodology}
+
+\subsection{Results and Discussion}
+
+\subsection{Conclusions}
+
+\section{Traveling in an Environment with Obstacles}
+
+\subsection{Methodology}
+
+\subsection{Results and Discussion}
+
+\section{Conclusions}
+
+\bibliographystyle{seg}
+\bibliography{references}
+%% ------------------------------------------------------------
+\end{document}
