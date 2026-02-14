@@ -103,7 +103,7 @@ Deep Reinforcement Learning}
 
 %% ------------------------------------------------------------
 \begin{abstract}
-    This work investigates Deep Reinforcement Learning (DRL) methods based on action-value function approximation in visually rich continuous control environments. Using MuJoCo tasks from the DeepMind Control Suite accessed via Gymnasium, we study locomotion and obstacle avoidance problems where the agent observes only RGB images instead of low-dimensional state vectors. As a baseline, we implement a Deep Q-Network (DQN) with a convolutional encoder followed by fully connected layers that jointly learn a visual state representation and an approximate Q-function over a discretized action space. We then extend this baseline to Rainbow DQN by incorporating key algorithmic improvements such as Double Q-learning, Prioritized Experience Replay, Dueling architecture, n-step returns, Distributional RL, and Noisy Networks. Through a series of experiments, we compare DQN and Rainbow in terms of sample efficiency, learning stability, and exploratory behavior in locomotion tasks. We further perform an ablation study on selected Rainbow components to quantify their individual impact, and finally evaluate both agents in obstacle-rich environments where agents must both move forward and avoid collisions. The results provide empirical insight into the benefits and limitations of advanced DQN variants in complex visual control settings, and help develop critical experimental criteria for DRL in continuous control.
+    This work investigates Deep Reinforcement Learning (DRL) for visually rich continuous control using MuJoCo tasks from the DeepMind Control Suite accessed via Gymnasium. We first implement a Deep Q-Network (DQN) baseline that learns a visual state representation and an approximate Q-function from RGB observations over a discretized action space. We then extend this baseline to Rainbow DQN, incorporating different improvements. Through experiments on locomotion and obstacle-avoidance tasks, we compare DQN and Rainbow in terms of sample efficiency, learning stability, and exploration, and conduct an ablation study on selected Rainbow components. Our results highlight when advanced DQN variants offer clear benefits over standard DQN in complex visual control environments.
 \end{abstract}
 
 \begin{keywords}
@@ -117,15 +117,90 @@ Deep Reinforcement Learning}
 
 \section{Introduction}
 
+Deep Reinforcement Learning (DRL) deals with high-dimensional state spaces, such as images, which are not feasibly handled with traditional RL methods. This project will revolve around the implementation and analysis of Deep Q-Networks (DQN) and Rainbow DQN, two prominent DRL algorithms that leverage deep neural networks to approximate the action-value function. These will be applied to continuous control tasks in visually rich environments, which deal with the challenge of learning effective policies from raw pixel observations. Specifically, the tasks will be related to locomotion and obstacle avoidance, where agents must learn to move forward while avoiding collisions.
+
 \subsection{Deep Q-Networks Fundamentals}
 
-Deep Reinforcement Learning (DRL) deals with high-dimensional state spaces, such as images, which are not feasibly handled with traditional RL methods.
+In order to understand the implementation of DQN and Rainbow DQN, we must first go through a slim review on the fundamentals of Q-learning. Traditional tabular Q-learning introduces an MDP (Markov Decision Process) where an agent learns to take actions in an environment to maximize cumulative rewards. The Q-function, denoted as $Q(s, a)$, represents the expected return of taking action $a$ in state $s$ and following the optimal policy thereafter. The update rule for Q-learning is given by:
+\[
+    Q(s, a) \leftarrow Q(s, a) + \alpha \left( r + \gamma \max_{a'} Q(s', a') - Q(s, a) \right) \footnote{Typically, the learning rate $\alpha$ is often decayed over time to ensure convergence, and the discount factor $\gamma$ is chosen based on the desired balance between immediate and future rewards.}
+\]
+where $\alpha$ is the learning rate, $\gamma$ is the discount factor, $r$ is the reward received after taking action $a$ in state $s$, and $s'$ is the next state.
+
+However, in high-dimensional state spaces, such as those involving images, it is infeasible to maintain a Q-table (due to the exponential growth of state-action pairs). This is where Deep Q-Networks come into play, using a neural network to approximate the Q-function. The DQN algorithm \citep{Intro_1_DQN} thus replaces the Q-table with a function approximator, typically a convolutional neural network (CNN) for processing visual inputs. This approximator, denoted as $Q_\theta(s, a)$, is trained (tuning its parameters $\theta$) to minimize the temporal difference error:
+\[
+    L(\theta) = \mathbb{E}_{s, a, r, s'} \left[ \left( r + \gamma \max_{a'} Q_{\theta^-}(s', a') - Q_\theta(s, a) \right)^2 \right]
+\]
+where $\theta^-$ are the parameters of a target network that is periodically updated to stabilize training.
+
+The DQN algorithm incorporates two stabilizing techniques:
+\begin{itemize}
+    \item \textbf{Experience Replay:} Instead of learning from consecutive samples, DQN stores past experiences in a replay buffer and samples mini-batches randomly for training:
+          \[
+              \mathcal{D} = \{(s, a, r, s')\}
+          \]
+          This breaks the correlation between consecutive samples and improves data efficiency.
+
+    \item \textbf{Target Network:} A separate target network with parameters $\theta^-$ is used to compute the target Q-values, which is updated less frequently than the main network. This helps to stabilize learning by providing a more consistent target for the Q-value updates. In order to do so, the target is defined as:
+          \[
+              y = r + \gamma \max_{a'} Q_{\theta^-}(s', a')
+          \]
+          and the network parameters $\theta$ are updated to minimize the loss \( L(\theta) = \left( y - Q_\theta(s, a) \right)^2 \).
+\end{itemize}
+
+These improvements allowed DQN to successfully learn policies from high-dimensional inputs, such as raw pixel observations in Atari games. However, DQN still suffers from issues like overestimation bias and sample inefficiency, which led to the development of Rainbow DQN.
 
 \subsection{Rainbow DQN}
 
+As we have briefly mentioned in the previous section DQN, while being a significant advancement in DRL, suffered from several limitations:
+\begin{itemize}
+    \item \textbf{Overestimation Bias:} The max operator in the target calculation can lead to overestimation of action values, which can destabilize learning.
+    \item \textbf{Sample Inefficiency:} Since all replayed transitions are treated equally, DQN may waste time learning from unimportant experiences.
+    \item \textbf{Lack of Exploration:} DQN typically uses $\epsilon$-greedy exploration, which is often suboptimal and unstable \citep{Intro_1_DQN}.
+\end{itemize}
+
+To address these issues, Rainbow DQN \citep{Intro_2_Rainbow} was proposed as a way to combine several previously independent improvements into a single, stronger DQN variant. The key components of Rainbow DQN include:
+\begin{itemize}
+    \item \textbf{Double Q-learning:} \citep{Intro_2_DDQN} This technique decouples action selection from action evaluation to reduce overestimation bias. The online network is used to select the action via \( a' = \arg\max_{a'} Q_\theta(s', a') \), while the target network is used to evaluate the action's value:
+          \[
+              y = r + \gamma \, Q_{\theta^-}(s', a')
+          \]
+
+    \item \textbf{Prioritized Experience Replay:} \citep{Intro_2_PER} Instead of sampling transitions uniformly from the replay buffer, this method prioritizes transitions that have a higher temporal difference (TD) error, which are more informative for learning the value function (since they provide more of a surprise to the agent)
+
+    \item \textbf{Dueling Architecture:} \citep{Intro_2_DuelingDQN} This architecture decomposes the Q-function into two separate estimators: one for the state value function \( V(s) \) and another for the advantage function \( A(s, a) \). The Q-value is then computed as:
+          \[
+              Q(s, a) = V(s) + A(s, a) - \frac{1}{|\mathcal{A}|} \sum_{a'} A(s, a')
+          \]
+          This allows the network to discern between different actions which may have similar values in certain states, improving learning efficiency.
+
+    \item \textbf{n-step Returns:} This technique uses multi-step instead of simple one-step returns to provide a richer learning signal, which can speed up learning by propagating rewards more quickly through the state space.
+
+    \item \textbf{Distributional RL:} Instead of estimating the expected return, this method models the entire distribution of returns, which can capture more information about the uncertainty and variability in the environment.
+
+    \item \textbf{Noisy Networks:} This approach replaces the $\epsilon$-greedy exploration strategy with a parameterized noise added to the network weights, which enables an adaptive exploration strategy that typically leads to better performance and stability.
+\end{itemize}
+
+As we will replicate in further sections, the authors also performed an ablation study to evaluate the contribution of each component, demonstrating that the combination of these techniques leads to significant performance improvements over the original DQN across a variety of Atari games. Thus, one of the main goals of this project will be to implement Rainbow DQN and perform a similar ablation study to understand the impact of each component in the context of continuous control tasks with visual inputs (studying specially the possible differences with respect to the authors' results).
+
 \subsection{Environments: MuJoCo and Deepmind Control Suite}
 
+It would be possible to implement DQN and Rainbow DQN in a variety of environments, as well as (given a proper budget) to create our own custom environments. However, for the sake of simplicity and reproducibility, we will focus on some simulation engines that are widely used in the DRL community. Specifically, we will use MuJoCo \citep{Intro_3_MuJoCo}, which stands for \textit{Multi-Joint dynamics with Contact}, a physics engine designed for research in robotics and control. It provides accurate and efficient simulation of complex articulated bodies with contact, collision and friction dynamics. What's more, it supports a myriad of systems, such as walkers, humanoids and quadrupeds, which makes it ideal for testing DRL algorithms in continuous control tasks.
+
+To access MuJoCo environments, we will use the DeepMind Control Suite \citep{Intro_3_DeepMindControlSuite}, which is a collection of standardized benchmarks for DRL algorithms. It provides a set of continuous control tasks with varying levels of difficulty, which are designed to set a standard for evaluating the performance of DRL algorithms.
+\newline In this project, we will focus on the \textbf{Walker2D} task \footnote{It must be noted that DPM exposes either low-dimensional state vectors or visual observations. In order to make the project as close to reality, we will work exclusively with RGB observations.}, which involves controlling a bipedal robot to walk forward as fast as possible without falling (more on this in the methodology section).
+
 \subsection{Environments Framework: Gymnasium}
+
+Last, we must introduce the framework we will use to interact with the environments. Gymnasium \citep{Intro_4_Gymnasium} is a toolkit for developing and comparing reinforcement learning algorithms (successor of OpenAI Gym). It standardizes the interface for RL environments, providing an API that allows agents to interact with a wide variety of environments in a consistent way. This allows agents to be plugged in and tested across different environments without needing to modify the underlying code.
+
+Therefore, our stack will consist of:
+\begin{itemize}
+    \item \textbf{Physics Engine:} MuJoCo, which will handle the physics simulation of our environments.
+    \item \textbf{Task Layer (Environments):} DeepMind Control Suite, which provides a set of standardized tasks for testing our algorithms.
+    \item \textbf{Interface Layer:} Gymnasium, by means of its abstractions, will allow us to interact with the environments in a consistent way, providing methods for resetting the environment, taking actions, and receiving observations and rewards.
+\end{itemize}
+
 
 \section{Traveling via DQN}
 
