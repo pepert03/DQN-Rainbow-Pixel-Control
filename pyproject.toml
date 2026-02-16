@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "dm-control>=1.0.14",
-    "gymnasium[mujoco]>=0.29.1",
+    "gymnasium[mujoco]>=1.0.0",
     "imageio>=2.30.0",
     "ipykernel>=6.0.0",
     "matplotlib>=3.7.0",
@@ -15,6 +15,7 @@ dependencies = [
     "numpy>=1.20.0",
     "opencv-python>=4.8.0",
     "pygame>=2.5.0",
+    "pyyaml>=6.0.3",
     "shimmy>=1.0.0",
     "tensorboard>=2.10.0",
     "torch>=2.0.0",
