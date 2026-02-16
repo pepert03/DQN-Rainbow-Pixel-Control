@@ -1,0 +1,34 @@
+# --- Python & UV ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env
+
+# --- Models and Checkpoints ---
+# "As a result... a checkpoint with the weights"
+# These are too heavy for GitHub.
+checkpoints/
+models/
+*.pth
+*.pt
+*.pkl
+
+# --- Results & Logs ---
+results/
+logs/
+runs/
+*tensorboard*
+
+# --- Media ---
+videos/
+*.mp4
+*.gif
+*.png
+*.jpg
+
+# --- IDE Settings ---
+.vscode/
+.idea/
+.DS_Store

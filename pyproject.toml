@@ -1,0 +1,16 @@
+[project]
+name = "dqn-rainbow-pixel-control"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dm-control>=1.0.36",
+    "gymnasium[mujoco]>=1.2.3",
+    "matplotlib>=3.10.8",
+    "mujoco>=3.4.0",
+    "numpy>=2.2.6",
+    "opencv-python>=4.13.0.92",
+    "shimmy>=2.0.0",
+    "torch>=2.10.0",
+]
