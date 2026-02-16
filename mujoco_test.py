@@ -13,7 +13,8 @@ import gymnasium as gym
 # Humanoid
 # gymnasium.make("Humanoid-v5")
 
-model = gym.make("Humanoid-v5").unwrapped.model
+# model = gym.make("Humanoid-v5").unwrapped.model
+model = gym.make("HalfCheetah-v5").unwrapped.model
 data = mujoco.MjData(model)
 
 # 2. Launch the viewer and run the simulation
