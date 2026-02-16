@@ -16,3 +16,4 @@ try:
             observation, info = env.reset()
 finally:
     env.close()
+
