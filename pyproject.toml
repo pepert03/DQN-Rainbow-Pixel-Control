@@ -18,6 +18,7 @@ dependencies = [
     "pyyaml>=6.0.3",
     "shimmy>=1.0.0",
     "tensorboard>=2.10.0",
-    "torch>=2.0.0",
+    "torch @ https://download.pytorch.org/whl/cu128/torch-2.10.0%2Bcu128-cp311-cp311-win_amd64.whl; sys_platform == 'win32' and python_version == '3.11'",
+    "torch>=2.0.0; sys_platform != 'win32'",
     "tyro>=0.8.0",
 ]

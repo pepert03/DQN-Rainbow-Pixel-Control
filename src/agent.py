@@ -67,7 +67,7 @@ class Agent:
         self.MODEL_FILE = os.path.join(RUNS_DIR, f"{self.hyperparameter_set}.pt")
         self.GRAPH_FILE = os.path.join(RUNS_DIR, f"{self.hyperparameter_set}.png")
 
-    def run(self, is_training=True, render=False):
+    def run(self, is_training=True, render=False, resume=False):
         if is_training:
             start_time = datetime.now()
             last_graph_update_time = start_time
@@ -93,9 +93,17 @@ class Agent:
 
         policy_dqn = DQN(state_dim, action_dim).to(device)
 
+        print(f"Running on device: {device}", torch.cuda.is_available())
+
         if is_training:
             buffer = ExperienceReplay(capacity=self.replay_memory_size)
             epsilon = self.epsilon_init
+
+            if resume and os.path.exists(self.MODEL_FILE):
+                policy_dqn.load_state_dict(
+                    torch.load(self.MODEL_FILE, map_location=device)
+                )
+                print(f"Resuming training from checkpoint: {self.MODEL_FILE}")
 
             target_dqn = DQN(state_dim, action_dim).to(device)
             target_dqn.load_state_dict(policy_dqn.state_dict())
@@ -245,11 +253,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train or test model.")
     parser.add_argument("hyperparameters", help="")
     parser.add_argument("--train", help="Training mode", action="store_true")
+    parser.add_argument(
+        "--resume",
+        help="Resume training from the last saved checkpoint in runs/<hyperparameters>.pt",
+        action="store_true",
+    )
     args = parser.parse_args()
 
     dql = Agent(hyperparameter_set=args.hyperparameters)
 
     if args.train:
-        dql.run(is_training=True)
+        dql.run(is_training=True, resume=args.resume)
     else:
         dql.run(is_training=False, render=True)
