@@ -54,6 +54,7 @@ class Agent:
             for k in (
                 "forward_reward_weight",
                 "ctrl_cost_weight",
+                "healthy_reward",
             )
             if k in config
         }
@@ -115,8 +116,8 @@ class Agent:
 
         for episode in itertools.count():
             state, _ = env.reset()
-            state = torch.tensor(state, dtype=torch.float32).to(device)
 
+            # Keep observations as numpy on CPU to save VRAM.
             terminated, truncated = False, False
             episode_reward = 0.0
 
@@ -125,19 +126,18 @@ class Agent:
                 if is_training and random.random() < epsilon:
                     # Sample from the action space
                     action = env.action_space.sample()
-                    action = torch.tensor(action, dtype=torch.int64, device=device)
                 else:
                     with torch.no_grad():
-                        # tensor([1,2,3,...]) -> tensor([[1,2,3,...]])
-                        action = policy_dqn(state.unsqueeze(0)).squeeze().argmax()
+                        state_tensor = torch.tensor(
+                            state, dtype=torch.float32, device=device
+                        ).unsqueeze(0)
+                        action = policy_dqn(state_tensor).squeeze().argmax().item()
 
                 # Take a step using the sampled action
-                next_state, reward, terminated, truncated, info = env.step(
-                    action.item()
-                )
+                next_state, reward, terminated, truncated, info = env.step(action)
 
-                next_state = torch.tensor(next_state, dtype=torch.float32).to(device)
-                reward = torch.tensor(reward, dtype=torch.float32, device=device)
+                # print(info)
+
                 episode_reward += float(reward)
 
                 if is_training:
@@ -145,6 +145,18 @@ class Agent:
                         state, action, reward, next_state, terminated or truncated
                     )
                     step_count += 1
+
+                    # Optimize every step once we have enough data
+                    if len(buffer) > self.mini_batch_size:
+                        mini_batch = buffer.sample(self.mini_batch_size)
+                        self.optimize(mini_batch, policy_dqn, target_dqn)
+
+                        epsilon = max(epsilon * self.epsilon_decay, self.epsilon_min)
+                        epsilon_history.append(epsilon)
+
+                        if step_count > self.network_sync_rate:
+                            target_dqn.load_state_dict(policy_dqn.state_dict())
+                            step_count = 0
 
                 # Move to new state
                 state = next_state
@@ -168,19 +180,7 @@ class Agent:
                     self.save_graph(rewards_per_episode, epsilon_history)
                     last_graph_update_time = current_time
 
-                # If enough experience has been collected
-                if len(buffer) > self.mini_batch_size:
-                    mini_batch = buffer.sample(self.mini_batch_size)
-                    self.optimize(mini_batch, policy_dqn, target_dqn)
-
-                    # Decay epsilon
-                    epsilon = max(epsilon * self.epsilon_decay, self.epsilon_min)
-                    epsilon_history.append(epsilon)
-
-                    # Copy policy network to target network after a certain number of steps
-                    if step_count > self.network_sync_rate:
-                        target_dqn.load_state_dict(policy_dqn.state_dict())
-                        step_count = 0
+                # (Optimization happens inside the step loop)
 
         env.close()
 
@@ -188,12 +188,14 @@ class Agent:
 
         states, actions, rewards, next_states, dones = zip(*mini_batch)
 
-        # Stacks
-        states = torch.stack(states).to(device)
-        actions = torch.stack(actions).to(device)
-        new_states = torch.stack(next_states).to(device)
-        rewards = torch.stack(rewards).to(device)
-        dones = torch.tensor(dones, dtype=torch.float32).to(device)
+        # Convert CPU numpy -> GPU tensors in a single batch (fast + VRAM-friendly)
+        states = torch.tensor(np.array(states), dtype=torch.float32, device=device)
+        actions = torch.tensor(actions, dtype=torch.int64, device=device)
+        new_states = torch.tensor(
+            np.array(next_states), dtype=torch.float32, device=device
+        )
+        rewards = torch.tensor(rewards, dtype=torch.float32, device=device)
+        dones = torch.tensor(dones, dtype=torch.float32, device=device)
 
         with torch.no_grad():
             target_q = (

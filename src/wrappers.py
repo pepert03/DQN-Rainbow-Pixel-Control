@@ -12,30 +12,30 @@ import itertools
 
 
 class DiscretizedActionWrapper(gym.ActionWrapper):
-    """
-    Maps discrete action index to continuous force vector.
-    Required because DQN outputs a single integer, but MuJoCo expects a vector of floats.
-    """
-
     def __init__(self, env, bins=3):
         super().__init__(env)
-        self.bins = bins
-        self.orig_action_space = env.action_space
 
-        # Get number of actuators (e.g., Walker2d: 6, Hopper: 3)
-        n_actions = self.orig_action_space.shape[0]
+        # 1. Obtener límites originales
+        low = self.env.action_space.low
+        high = self.env.action_space.high
+        n_dims = self.env.action_space.shape[0]
 
-        # Generate all possible force combinations [-1, 0, 1]
-        self.actions_grid = list(itertools.product([-1, 0, 1], repeat=n_actions))
+        # 2. Crear valores posibles por dimensión (escalados correctamente)
+        # Para cada dimensión, creamos 'bins' puntos entre su low y su high
+        values_per_dim = [np.linspace(low[i], high[i], bins) for i in range(n_dims)]
 
-        # Define new discrete action space
+        # 3. Pre-calcular la matriz de acciones (Mucho más rápido que itertools en el step)
+        # self.actions_grid será de forma (bins^n_dims, n_dims)
+        self.actions_grid = np.array(
+            list(itertools.product(*values_per_dim)), dtype=np.float32
+        )
+
+        # 4. Definir el nuevo espacio discreto
         self.action_space = Discrete(len(self.actions_grid))
 
     def action(self, action_index):
-        discrete_action = self.actions_grid[action_index]
-        low = self.orig_action_space.low
-        high = self.orig_action_space.high
-        return np.array(discrete_action, dtype=np.float32) * high
+        # Acceso directo por índice en la matriz pre-calculada
+        return self.actions_grid[action_index]
 
 
 class ExtractObsWrapper(gym.ObservationWrapper):
@@ -50,6 +50,13 @@ class ExtractObsWrapper(gym.ObservationWrapper):
         return obs[self.key]
 
 
+class RewardWrapper(gym.Wrapper):
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        # Head coordinate after - before step
+        pass
+
+
 def make_env(env_id, render=False, seed=42, **env_kwargs):
     """
     Creates env with Pixel observation + Discretization + Stack.
@@ -60,6 +67,8 @@ def make_env(env_id, render=False, seed=42, **env_kwargs):
     # which is not the case for render_mode="human".
     # So we always create the env with render_mode="rgb_array" for pixel obs.
     env = gym.make(env_id, render_mode="rgb_array", **env_kwargs)
+
+    # env = RewardWrapper(env)
 
     # Gymnasium v1.x replacement for PixelObservationWrapper
     # render_only=True makes the observation be the rendered frame
@@ -72,7 +81,7 @@ def make_env(env_id, render=False, seed=42, **env_kwargs):
     # env = ExtractObsWrapper(env, key="pixels")
 
     # Discretize actions (Fixed class name here)
-    env = DiscretizedActionWrapper(env, bins=3)
+    env = DiscretizedActionWrapper(env, bins=2)
 
     # Stack frames
     env = FrameStackObservation(env, stack_size=4)
