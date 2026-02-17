@@ -4,7 +4,7 @@ from torch import nn
 import gymnasium as gym
 from dqn import DQN
 from buffer import ExperienceReplay
-from wrappers import DiscretizedActionWrapper
+from wrappers import make_env
 import itertools
 import yaml
 import random
@@ -48,6 +48,16 @@ class Agent:
         self.learning_rate = config["learning_rate"]
         self.discount_factor_g = config["discount_factor_g"]
 
+        # Optional MuJoCo env parameters (only used by MuJoCo envs that support them)
+        self.env_make_kwargs = {
+            k: config[k]
+            for k in (
+                "forward_reward_weight",
+                "ctrl_cost_weight",
+            )
+            if k in config
+        }
+
         self.optimizer = None
         self.loss_fn = nn.MSELoss()
 
@@ -66,11 +76,13 @@ class Agent:
             with open(self.LOG_FILE, "w") as file:
                 file.write(log_message + "\n")
 
-        env = gym.make(self.env_id, render_mode="human" if render else None)
+        # env = gym.make(self.env_id, render_mode="human" if render else None)
 
-        # DQN needs a discrete action space. If the env is continuous (Box), discretize it.
-        if isinstance(env.action_space, gym.spaces.Box):
-            env = DiscretizedActionWrapper(env, bins=3)
+        # # DQN needs a discrete action space. If the env is continuous (Box), discretize it.
+        # if isinstance(env.action_space, gym.spaces.Box):
+        #     env = DiscretizedActionWrapper(env, bins=3)
+
+        env = make_env(self.env_id, render, seed=42, **self.env_make_kwargs)
 
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.n
@@ -81,7 +93,7 @@ class Agent:
         policy_dqn = DQN(state_dim, action_dim).to(device)
 
         if is_training:
-            buffer = ExperienceReplay(capacity=self.replay_memory_size, seed=42)
+            buffer = ExperienceReplay(capacity=self.replay_memory_size)
             epsilon = self.epsilon_init
 
             target_dqn = DQN(state_dim, action_dim).to(device)

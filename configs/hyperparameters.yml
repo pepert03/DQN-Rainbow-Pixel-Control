@@ -1,14 +1,3 @@
-cartpole1:
-  env_id: CartPole-v1
-  replay_memory_size: 100000
-  mini_batch_size: 32
-  epsilon_init: 1
-  epsilon_decay: 0.9995
-  epsilon_min: 0.05
-  network_sync_rate: 10
-  learning_rate: 0.0001
-  discount_factor_g: 0.99
-
 walker2d:
   env_id: Walker2d-v5
   replay_memory_size: 100000
@@ -19,3 +8,5 @@ walker2d:
   network_sync_rate: 10
   learning_rate: 0.0001
   discount_factor_g: 0.99
+  forward_reward_weight: 2.0
+  ctrl_cost_weight: 0.1
