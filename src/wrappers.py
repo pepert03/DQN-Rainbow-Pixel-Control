@@ -51,10 +51,36 @@ class ExtractObsWrapper(gym.ObservationWrapper):
 
 
 class RewardWrapper(gym.Wrapper):
+    def __init__(self, env, debug=False):
+        super().__init__(env)
+        self.debug = debug
+        self.max_x_position = 0
+        self.ctrl_cost_weight = 0.001
+        self.forward_reward_weight = 100.0
+
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
-        # Head coordinate after - before step
-        pass
+
+        x_position = info["x_position"]
+        reward = 0
+
+        if x_position > self.max_x_position:
+            reward += (
+                x_position - self.max_x_position
+            ) * self.forward_reward_weight  # Reward for forward progress
+            self.max_x_position = x_position
+
+        # penalize control cost
+        ctrl_cost = self.ctrl_cost_weight * np.sum(np.square(action))
+        reward -= ctrl_cost
+
+        if self.debug:
+            print(
+                f"Step reward: {reward:.3f} (x_position: {x_position:.3f}, ctrl_cost: {ctrl_cost:.3f})"
+            )
+        if terminated or truncated:
+            self.max_x_position = 0  # Reset max position at the end of an episode
+        return obs, reward, terminated, truncated, info
 
 
 def make_env(env_id, render=False, seed=42, **env_kwargs):
@@ -68,7 +94,7 @@ def make_env(env_id, render=False, seed=42, **env_kwargs):
     # So we always create the env with render_mode="rgb_array" for pixel obs.
     env = gym.make(env_id, render_mode="rgb_array", **env_kwargs)
 
-    # env = RewardWrapper(env)
+    env = RewardWrapper(env, debug=render)
 
     # Gymnasium v1.x replacement for PixelObservationWrapper
     # render_only=True makes the observation be the rendered frame
