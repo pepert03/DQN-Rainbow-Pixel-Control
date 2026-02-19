@@ -132,6 +132,11 @@ class Agent:
                 next_state, reward, terminated, truncated, info = env.step(action)
 
                 # print(info)
+                if render:
+                    print(
+                        f"Episode Reward: {episode_reward:0.1f}, Step Reward: {reward:0.1f}",
+                        end="\r",
+                    )
 
                 episode_reward += float(reward)
 

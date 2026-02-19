@@ -11,30 +11,53 @@ from gymnasium.wrappers import (
 import itertools
 
 
+# Discreize continuous actions n into bins, no need to separete into combinations of actions for each dimension, as the agent will just choose one action at a time
+# Example: For HalfCheetah-v5, action space is Box(-1.0, 1.0, (6,), float32)
+# With bins=3, we create discrete actions for each dimension: [-1.0, 0.0, 1.0]
+# The total number of discrete actions becomes 3x6 = 18
+# but the action 0 is the same for all dimensions so we need to remove duplicates
+# The resulting action space is Discrete(13) with actions
 class DiscretizedActionWrapper(gym.ActionWrapper):
     def __init__(self, env, bins=3):
         super().__init__(env)
 
-        # 1. Obtener límites originales
+        # Nos aseguramos de que el entorno original sea continuo
+        assert isinstance(
+            env.action_space, gym.spaces.Box
+        ), "Action space must be continuous (Box)."
+
         low = self.env.action_space.low
         high = self.env.action_space.high
         n_dims = self.env.action_space.shape[0]
 
-        # 2. Crear valores posibles por dimensión (escalados correctamente)
-        # Para cada dimensión, creamos 'bins' puntos entre su low y su high
-        values_per_dim = [np.linspace(low[i], high[i], bins) for i in range(n_dims)]
+        # 1. Empezamos la lista con la acción base: "No hacer nada" (Vector de ceros)
+        actions = [np.zeros(n_dims, dtype=np.float32)]
 
-        # 3. Pre-calcular la matriz de acciones (Mucho más rápido que itertools en el step)
-        # self.actions_grid será de forma (bins^n_dims, n_dims)
-        self.actions_grid = np.array(
-            list(itertools.product(*values_per_dim)), dtype=np.float32
+        # 2. Iteramos por cada dimensión para crear sus acciones individuales
+        for i in range(n_dims):
+            # Generamos los valores posibles para esta articulación/motor
+            values = np.linspace(low[i], high[i], bins)
+
+            for v in values:
+                # Evitamos añadir el 0.0 de nuevo, ya que está cubierto por la acción base
+                if not np.isclose(v, 0.0):
+                    # Creamos un vector de ceros y solo modificamos la dimensión actual
+                    action_vec = np.zeros(n_dims, dtype=np.float32)
+                    action_vec[i] = v
+                    actions.append(action_vec)
+
+        # Convertimos a array de numpy para acceso rápido en el step
+        self.actions_grid = np.array(actions, dtype=np.float32)
+
+        # 3. Definimos el nuevo espacio de acción discreto
+        # Para bins=3 y n_dims=6, esto será Discrete(13)
+        self.action_space = Discrete(len(self.actions_grid))
+        print(
+            f"DiscretizedActionWrapper initialized with {len(self.actions_grid)} discrete actions."
         )
 
-        # 4. Definir el nuevo espacio discreto
-        self.action_space = Discrete(len(self.actions_grid))
-
     def action(self, action_index):
-        # Acceso directo por índice en la matriz pre-calculada
+        # Mapea el entero que devuelve la DQN al vector continuo para MuJoCo
         return self.actions_grid[action_index]
 
 
@@ -67,7 +90,17 @@ class WalkerReward(gym.Wrapper):
 
 
 def make_state_env(env_id, render=False, seed=42):
-    env = gym.make(env_id, render_mode="human" if render else None)
+
+    if "Walker2d-v5" in env_id:
+        env = gym.make(
+            env_id,
+            render_mode="human" if render else None,
+            healthy_angle_range=(-0.4, 0.4),
+            max_episode_steps=1500,
+        )
+        env = WalkerReward(env)
+    else:
+        env = gym.make(env_id, render_mode="human" if render else None)
 
     # Discretize actions if needed
     if isinstance(env.action_space, Box):
@@ -87,11 +120,17 @@ def make_pixel_env(env_id, render=False, seed=42):
     # IMPORTANT: AddRenderObservation needs env.render() to return an RGB array,
     # which is not the case for render_mode="human".
     # So we always create the env with render_mode="rgb_array" for pixel obs.
-    env = gym.make(env_id, render_mode="rgb_array")
 
     if "Walker2d-v5" in env_id:
+        env = gym.make(
+            env_id,
+            render_mode="rgb_array",
+            healthy_angle_range=(-0.4, 0.4),
+            max_episode_steps=1500,
+        )
         env = WalkerReward(env)
-        print("Applied WalkerReward wrapper to Walker2d-v5")
+    else:
+        env = gym.make(env_id, render_mode="rgb_array")
 
     # render_only=True makes the observation be the rendered frame
     env = AddRenderObservation(env, render_only=True)
@@ -100,7 +139,7 @@ def make_pixel_env(env_id, render=False, seed=42):
     env = ResizeObservation(env, (84, 84))
 
     # Discretize actions (Fixed class name here)
-    env = DiscretizedActionWrapper(env, bins=2)
+    env = DiscretizedActionWrapper(env, bins=3)
 
     # Stack frames
     env = FrameStackObservation(env, stack_size=4)

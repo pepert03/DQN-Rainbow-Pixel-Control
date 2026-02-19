@@ -12,7 +12,7 @@ humanoid:
 
 walker2d:
   env_id: Walker2d-v5
-  obs: pixel # options: pixel, state
+  obs: state # options: pixel, state
   replay_memory_size: 200000
   mini_batch_size: 64
   epsilon_init: 1.0
