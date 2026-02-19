@@ -2,7 +2,7 @@ import argparse
 import torch
 from torch import nn
 import gymnasium as gym
-from dqn import DQN
+from dqn import Pixel_DQN, DQN
 from buffer import ExperienceReplay
 from wrappers import make_env
 import itertools
@@ -39,6 +39,7 @@ class Agent:
         self.hyperparameter_set = hyperparameter_set
 
         self.env_id = config["env_id"]
+        self.obs_type = config["obs"]
         self.replay_memory_size = config["replay_memory_size"]
         self.mini_batch_size = config["mini_batch_size"]
         self.epsilon_init = config["epsilon_init"]
@@ -48,26 +49,18 @@ class Agent:
         self.learning_rate = config["learning_rate"]
         self.discount_factor_g = config["discount_factor_g"]
 
-        # Optional MuJoCo env parameters (only used by MuJoCo envs that support them)
-        self.env_make_kwargs = {
-            k: config[k]
-            for k in (
-                "forward_reward_weight",
-                "ctrl_cost_weight",
-                "healthy_reward",
-            )
-            if k in config
-        }
-
         self.optimizer = None
         self.loss_fn = nn.MSELoss()
 
         # Path to Run info
         self.LOG_FILE = os.path.join(RUNS_DIR, f"{self.hyperparameter_set}.log")
         self.MODEL_FILE = os.path.join(RUNS_DIR, f"{self.hyperparameter_set}.pt")
+        self.CHECKPOINT_FILE = os.path.join(
+            RUNS_DIR, f"{self.hyperparameter_set}_checkpoint.pt"
+        )
         self.GRAPH_FILE = os.path.join(RUNS_DIR, f"{self.hyperparameter_set}.png")
 
-    def run(self, is_training=True, render=False, resume=False):
+    def run(self, is_training=True, render=False):
         if is_training:
             start_time = datetime.now()
             last_graph_update_time = start_time
@@ -77,13 +70,7 @@ class Agent:
             with open(self.LOG_FILE, "w") as file:
                 file.write(log_message + "\n")
 
-        # env = gym.make(self.env_id, render_mode="human" if render else None)
-
-        # # DQN needs a discrete action space. If the env is continuous (Box), discretize it.
-        # if isinstance(env.action_space, gym.spaces.Box):
-        #     env = DiscretizedActionWrapper(env, bins=3)
-
-        env = make_env(self.env_id, render, seed=42, **self.env_make_kwargs)
+        env = make_env(self.env_id, self.obs_type, render)
 
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.n
@@ -91,21 +78,21 @@ class Agent:
         rewards_per_episode = []
         epsilon_history = []
 
-        policy_dqn = DQN(state_dim, action_dim).to(device)
+        if self.obs_type == "pixel":
+            policy_dqn = Pixel_DQN(state_dim, action_dim).to(device)
+        else:
+            policy_dqn = DQN(state_dim, action_dim).to(device)
 
-        print(f"Running on device: {device}", torch.cuda.is_available())
+        print(f"Running on device: {device}")
 
         if is_training:
             buffer = ExperienceReplay(capacity=self.replay_memory_size)
             epsilon = self.epsilon_init
 
-            if resume and os.path.exists(self.MODEL_FILE):
-                policy_dqn.load_state_dict(
-                    torch.load(self.MODEL_FILE, map_location=device)
-                )
-                print(f"Resuming training from checkpoint: {self.MODEL_FILE}")
-
-            target_dqn = DQN(state_dim, action_dim).to(device)
+            if self.obs_type == "pixel":
+                target_dqn = Pixel_DQN(state_dim, action_dim).to(device)
+            else:
+                target_dqn = DQN(state_dim, action_dim).to(device)
             target_dqn.load_state_dict(policy_dqn.state_dict())
 
             # Count the number of steps taken (for target network updates)
@@ -181,14 +168,14 @@ class Agent:
 
                     torch.save(policy_dqn.state_dict(), self.MODEL_FILE)
                     best_reward = episode_reward
+                elif episode % 100 == 0:
+                    torch.save(policy_dqn.state_dict(), self.CHECKPOINT_FILE)
 
                 # Update graph every x seconds
                 current_time = datetime.now()
                 if current_time - last_graph_update_time > timedelta(seconds=10):
                     self.save_graph(rewards_per_episode, epsilon_history)
                     last_graph_update_time = current_time
-
-                # (Optimization happens inside the step loop)
 
         env.close()
 
@@ -223,27 +210,17 @@ class Agent:
         self.optimizer.step()
 
     def save_graph(self, rewards_per_episode, epsilon_history):
-        # Save plots
         fig = plt.figure(1)
-
-        # Plot average rewards (Y-axis) vs episodes (X-axis)
         mean_rewards = np.zeros(len(rewards_per_episode))
         for x in range(len(mean_rewards)):
             mean_rewards[x] = np.mean(rewards_per_episode[max(0, x - 99) : (x + 1)])
-        plt.subplot(121)  # plot on a 1 row x 2 col grid, at cell 1
-        # plt.xlabel('Episodes')
+        plt.subplot(121)
         plt.ylabel("Mean Rewards")
         plt.plot(mean_rewards)
-
-        # Plot epsilon decay (Y-axis) vs episodes (X-axis)
-        plt.subplot(122)  # plot on a 1 row x 2 col grid, at cell 2
-        # plt.xlabel('Time Steps')
+        plt.subplot(122)
         plt.ylabel("Epsilon Decay")
         plt.plot(epsilon_history)
-
         plt.subplots_adjust(wspace=1.0, hspace=1.0)
-
-        # Save plots
         fig.savefig(self.GRAPH_FILE)
         plt.close(fig)
 
@@ -253,16 +230,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train or test model.")
     parser.add_argument("hyperparameters", help="")
     parser.add_argument("--train", help="Training mode", action="store_true")
-    parser.add_argument(
-        "--resume",
-        help="Resume training from the last saved checkpoint in runs/<hyperparameters>.pt",
-        action="store_true",
-    )
+
     args = parser.parse_args()
 
     dql = Agent(hyperparameter_set=args.hyperparameters)
 
     if args.train:
-        dql.run(is_training=True, resume=args.resume)
+        dql.run(is_training=True)
     else:
         dql.run(is_training=False, render=True)

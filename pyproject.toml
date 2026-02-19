@@ -20,5 +20,6 @@ dependencies = [
     "tensorboard>=2.10.0",
     "torch @ https://download.pytorch.org/whl/cu128/torch-2.10.0%2Bcu128-cp311-cp311-win_amd64.whl; sys_platform == 'win32' and python_version == '3.11'",
     "torch>=2.0.0; sys_platform != 'win32'",
+    "torchvision>=0.25.0",
     "tyro>=0.8.0",
 ]

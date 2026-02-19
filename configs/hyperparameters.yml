@@ -1,13 +1,38 @@
+humanoid:
+  env_id: Humanoid-v5
+  obs: state # options: pixel, state
+  replay_memory_size: 200000
+  mini_batch_size: 64
+  epsilon_init: 1.0
+  epsilon_decay: 0.99999
+  epsilon_min: 0.01
+  network_sync_rate: 2000
+  learning_rate: 0.0001
+  discount_factor_g: 0.99
+
 walker2d:
   env_id: Walker2d-v5
-  replay_memory_size: 100000
-  mini_batch_size: 32
-  epsilon_init: 0.5
-  epsilon_decay: 0.99995
-  epsilon_min: 0.05
-  network_sync_rate: 1000
+  obs: pixel # options: pixel, state
+  replay_memory_size: 200000
+  mini_batch_size: 64
+  epsilon_init: 1.0
+  epsilon_decay: 0.99999
+  epsilon_min: 0.01
+  network_sync_rate: 2000
   learning_rate: 0.0001
   discount_factor_g: 0.99
   forward_reward_weight: 1.0
   ctrl_cost_weight: 0.001
   healthy_reward: 1.0
+
+cartpole:
+  env_id: CartPole-v1
+  obs: state # options: pixel, state
+  replay_memory_size: 100000
+  mini_batch_size: 32
+  epsilon_init: 0.3
+  epsilon_decay: 0.99995
+  epsilon_min: 0.05
+  network_sync_rate: 1000
+  learning_rate: 0.0001
+  discount_factor_g: 0.99

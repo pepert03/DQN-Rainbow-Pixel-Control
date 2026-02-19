@@ -38,52 +38,47 @@ class DiscretizedActionWrapper(gym.ActionWrapper):
         return self.actions_grid[action_index]
 
 
-class ExtractObsWrapper(gym.ObservationWrapper):
-    def __init__(self, env, key="pixels"):
+class WalkerReward(gym.Wrapper):
+    def __init__(self, env, torso_weight=1.0, knee_weight=0.3, symmetry_weight=0.1):
         super().__init__(env)
-        self.key = key
-        # Update the observation space to match the shape of the pixel data
-        self.observation_space = env.observation_space[key]
-
-    def observation(self, obs):
-        # Extract only the pixel data from the observation dictionary
-        return obs[self.key]
-
-
-class RewardWrapper(gym.Wrapper):
-    def __init__(self, env, debug=False):
-        super().__init__(env)
-        self.debug = debug
-        self.max_x_position = 0
-        self.ctrl_cost_weight = 0.001
-        self.forward_reward_weight = 100.0
+        self.torso_weight = torso_weight
+        self.knee_weight = knee_weight
+        self.symmetry_weight = symmetry_weight
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
 
-        x_position = info["x_position"]
-        reward = 0
+        torso_angle = obs[1]
+        left_knee = obs[3]
+        right_knee = obs[6]
+        left_hip = obs[2]
+        right_hip = obs[5]
 
-        if x_position > self.max_x_position:
-            reward += (
-                x_position - self.max_x_position
-            ) * self.forward_reward_weight  # Reward for forward progress
-            self.max_x_position = x_position
+        torso_penalty = self.torso_weight * torso_angle**2
+        knee_penalty = self.knee_weight * (left_knee**2 + right_knee**2)
+        symmetry_penalty = self.symmetry_weight * (
+            (left_knee - right_knee) ** 2 + (left_hip - right_hip) ** 2
+        )
 
-        # penalize control cost
-        ctrl_cost = self.ctrl_cost_weight * np.sum(np.square(action))
-        reward -= ctrl_cost
+        # Shaped reward
+        shaped_reward = reward - torso_penalty - knee_penalty - symmetry_penalty
 
-        if self.debug:
-            print(
-                f"Step reward: {reward:.3f} (x_position: {x_position:.3f}, ctrl_cost: {ctrl_cost:.3f})"
-            )
-        if terminated or truncated:
-            self.max_x_position = 0  # Reset max position at the end of an episode
-        return obs, reward, terminated, truncated, info
+        return obs, shaped_reward, terminated, truncated, info
 
 
-def make_env(env_id, render=False, seed=42, **env_kwargs):
+def make_state_env(env_id, render=False, seed=42):
+    env = gym.make(env_id, render_mode="human" if render else None)
+
+    # Discretize actions if needed
+    if isinstance(env.action_space, Box):
+        env = DiscretizedActionWrapper(env, bins=3)
+
+    env.action_space.seed(seed)
+    env.observation_space.seed(seed)
+    return env
+
+
+def make_pixel_env(env_id, render=False, seed=42):
     """
     Creates env with Pixel observation + Discretization + Stack.
     This function returns a thunk for use with SyncVectorEnv.
@@ -92,19 +87,17 @@ def make_env(env_id, render=False, seed=42, **env_kwargs):
     # IMPORTANT: AddRenderObservation needs env.render() to return an RGB array,
     # which is not the case for render_mode="human".
     # So we always create the env with render_mode="rgb_array" for pixel obs.
-    env = gym.make(env_id, render_mode="rgb_array", **env_kwargs)
+    env = gym.make(env_id, render_mode="rgb_array")
 
-    env = RewardWrapper(env, debug=render)
+    if "Walker2d-v5" in env_id:
+        env = WalkerReward(env)
+        print("Applied WalkerReward wrapper to Walker2d-v5")
 
-    # Gymnasium v1.x replacement for PixelObservationWrapper
     # render_only=True makes the observation be the rendered frame
     env = AddRenderObservation(env, render_only=True)
 
     # ResizeObservation receives an image (Box), not a dict
     env = ResizeObservation(env, (84, 84))
-
-    # # Extract pixel observations (dict -> array)
-    # env = ExtractObsWrapper(env, key="pixels")
 
     # Discretize actions (Fixed class name here)
     env = DiscretizedActionWrapper(env, bins=2)
@@ -112,18 +105,18 @@ def make_env(env_id, render=False, seed=42, **env_kwargs):
     # Stack frames
     env = FrameStackObservation(env, stack_size=4)
 
-    # If the user wants to *see* the episode, wrap with HumanRendering at the end.
-    # This avoids breaking AddRenderObservation's assertion.
     if render:
         env = HumanRendering(env)
-
-    # # CleanRL wrappers
-    # env = gym.wrappers.RecordEpisodeStatistics(env)
-    # if capture_video and idx == 0:
-    #     env = gym.wrappers.RecordVideo(
-    #         env, f"videos/{run_name}", episode_trigger=lambda x: x % 1000 == 0
-    #     )
 
     env.action_space.seed(seed)
     env.observation_space.seed(seed)
     return env
+
+
+def make_env(env_id, obs_type, render=False, seed=42):
+    if obs_type == "pixel":
+        return make_pixel_env(env_id, render, seed)
+    elif obs_type == "state":
+        return make_state_env(env_id, render, seed)
+    else:
+        raise ValueError(f"Unsupported obs_type: {obs_type}")

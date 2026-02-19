@@ -3,23 +3,22 @@ from torch import nn
 import torch.nn.functional as F
 
 
-# class DQN(nn.Module):
-#     def __init__(self, state_dim, action_dim, hidden_dim=256):
-#         super(DQN, self).__init__()
-#         self.fc1 = nn.Linear(state_dim, 128)
-#         self.fc2 = nn.Linear(128, 128)
-#         self.fc3 = nn.Linear(128, action_dim)
-
-#     def forward(self, x):
-#         x = F.relu(self.fc1(x))
-#         x = F.relu(self.fc2(x))
-#         return self.fc3(x)
-
-
 class DQN(nn.Module):
     def __init__(self, state_dim, action_dim, hidden_dim=256):
+        super(DQN, self).__init__()
+        self.fc1 = nn.Linear(state_dim, 128)
+        self.fc2 = nn.Linear(128, 128)
+        self.fc3 = nn.Linear(128, action_dim)
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
+
+
+class Pixel_DQN(nn.Module):
+    def __init__(self, state_dim, action_dim, hidden_dim=256):
         super().__init__()
-        # Input: 12 channels (4 stacked frames * 3 RGB colors)
         self.network = nn.Sequential(
             nn.Conv2d(12, 32, 8, stride=4),
             nn.ReLU(),
@@ -34,6 +33,10 @@ class DQN(nn.Module):
         )
 
     def forward(self, x):
+        # img = x[0, 0].cpu().numpy()  # Shape: [84, 84, 3]
+        # from PIL import Image
+        # Image.fromarray(img.astype("uint8")).save("debug_input.png")
+
         # Ensure input is a float tensor on the correct device
         if not isinstance(x, torch.Tensor):
             x = torch.tensor(
@@ -59,5 +62,5 @@ class DQN(nn.Module):
 if __name__ == "__main__":
     state_dim = 17  # Example state dimension for HalfCheetah-v5
     action_dim = 6  # Example action dimension for HalfCheetah-v5
-    model = DQN(state_dim, action_dim)
+    model = Pixel_DQN(state_dim, action_dim)
     print(model)
