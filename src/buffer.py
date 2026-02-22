@@ -23,8 +23,8 @@ class ExperienceReplay:
 class PrioritizedExperienceReplay(ExperienceReplay):
     def __init__(self, capacity, alpha=0.6, beta=0.4, seed=None):
         super().__init__(capacity, seed)
-        self.alpha = alpha
-        self.beta = beta
+        self.alpha = alpha  # Tunes the degree of prioritization (0 - no prioritization, 1 - full prioritization)
+        self.beta = beta  # Tunes the degree of importance-sampling correction (0 - no correction, 1 - full correction)
         self.priorities = deque(maxlen=capacity)
 
     def push(self, state, action, reward, next_state, done):
