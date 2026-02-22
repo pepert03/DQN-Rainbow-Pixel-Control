@@ -1,4 +1,5 @@
 import argparse
+from pyparsing import deque
 import torch
 from torch import nn
 import gymnasium as gym
@@ -13,6 +14,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from datetime import datetime, timedelta
+import time
+from typing import Any
 
 # For printing date and time
 DATE_FORMAT = "%m-%d %H:%M:%S"
@@ -21,7 +24,6 @@ DATE_FORMAT = "%m-%d %H:%M:%S"
 RUNS_DIR = "runs"
 os.makedirs(RUNS_DIR, exist_ok=True)
 
-# 'Agg': used to generate plots as images and save them to a file instead of rendering to screen
 matplotlib.use("Agg")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -32,9 +34,20 @@ CONFIG = "./configs/hyperparameters.yml"
 class Agent:
 
     def __init__(self, hyperparameter_set):
-        with open(CONFIG, "r") as f:
-            all_config = yaml.safe_load(f)
-            config = all_config[hyperparameter_set]
+        # If folder runs/hyperparameter_set exists, we are resuming training, so we load the config.yml from that folder.
+        #  Otherwise, we load the config from the main configs folder.
+        config_file = os.path.join(RUNS_DIR, hyperparameter_set, "config.yml")
+        if os.path.exists(config_file):
+            with open(config_file, "r") as f:
+                config = yaml.safe_load(f)
+        else:
+            with open(CONFIG, "r") as f:
+                all_config = yaml.safe_load(f)
+                config = all_config[hyperparameter_set]
+                # Save the config to the runs folder for future reference
+                os.makedirs(os.path.join(RUNS_DIR, hyperparameter_set), exist_ok=True)
+                with open(config_file, "w") as f:
+                    yaml.dump(config, f)
 
         self.hyperparameter_set = hyperparameter_set
 
@@ -48,17 +61,155 @@ class Agent:
         self.network_sync_rate = config["network_sync_rate"]
         self.learning_rate = config["learning_rate"]
         self.discount_factor_g = config["discount_factor_g"]
+        self.enable_double_dqn = config["enable_double_dqn"]
+        self.enable_dueling_dqn = config["enable_dueling_dqn"]
 
         self.optimizer = None
         self.loss_fn = nn.MSELoss()
 
         # Path to Run info
-        self.LOG_FILE = os.path.join(RUNS_DIR, f"{self.hyperparameter_set}.log")
-        self.MODEL_FILE = os.path.join(RUNS_DIR, f"{self.hyperparameter_set}.pt")
-        self.CHECKPOINT_FILE = os.path.join(
-            RUNS_DIR, f"{self.hyperparameter_set}_checkpoint.pt"
+        self.LOG_FILE = os.path.join(RUNS_DIR, self.hyperparameter_set, "training.log")
+        self.MODEL_FILE = os.path.join(
+            RUNS_DIR, self.hyperparameter_set, "best_model.pt"
         )
-        self.GRAPH_FILE = os.path.join(RUNS_DIR, f"{self.hyperparameter_set}.png")
+        self.CHECKPOINT_FILE = os.path.join(
+            RUNS_DIR, self.hyperparameter_set, "checkpoint.pt"
+        )
+        self.GRAPH_FILE = os.path.join(RUNS_DIR, self.hyperparameter_set, "graph.png")
+
+    def load_model(self, is_training=True, render=False):
+
+        env = make_env(self.env_id, self.obs_type, render)
+
+        state_dim = env.observation_space.shape[0]
+        action_dim = env.action_space.n
+
+        # Instantiate models up-front (needed for both fresh start and resume)
+        if self.obs_type == "pixel":
+            policy_dqn = Pixel_DQN(
+                state_dim, action_dim, enable_dueling_dqn=self.enable_dueling_dqn
+            ).to(device)
+            target_dqn = Pixel_DQN(
+                state_dim, action_dim, enable_dueling_dqn=self.enable_dueling_dqn
+            ).to(device)
+        else:
+            policy_dqn = DQN(
+                state_dim, action_dim, enable_dueling_dqn=self.enable_dueling_dqn
+            ).to(device)
+            target_dqn = DQN(
+                state_dim, action_dim, enable_dueling_dqn=self.enable_dueling_dqn
+            ).to(device)
+        target_dqn.load_state_dict(policy_dqn.state_dict())
+
+        # Training-only state
+        buffer = ExperienceReplay(capacity=self.replay_memory_size)
+        epsilon = self.epsilon_init
+        step_count = 0
+        if is_training:
+            self.optimizer = torch.optim.Adam(
+                policy_dqn.parameters(), lr=self.learning_rate
+            )
+
+        start_episode = 0
+        best_reward = float("-inf")
+        rewards_per_episode: list[float] = []
+        epsilon_history: list[float] = []
+
+        checkpoint_file = os.path.join(
+            RUNS_DIR, self.hyperparameter_set, "checkpoint.pt"
+        )
+
+        if is_training:
+            if os.path.exists(checkpoint_file):
+                checkpoint = torch.load(
+                    checkpoint_file, map_location=device, weights_only=False
+                )
+                policy_dqn.load_state_dict(checkpoint["model_state_dict"])
+                target_dqn.load_state_dict(checkpoint["target_model_state_dict"])
+                self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+                epsilon = float(checkpoint.get("epsilon", epsilon))
+                step_count = int(checkpoint.get("step_count", step_count))
+                start_episode = int(checkpoint.get("episode", 0)) + 1
+                best_reward = float(checkpoint.get("best_reward", best_reward))
+                rewards_per_episode = list(checkpoint.get("rewards_per_episode", []))
+                epsilon_history = list(checkpoint.get("epsilon_history", []))
+
+                rb = checkpoint.get("replay_buffer")
+                if rb is not None:
+                    buffer = ExperienceReplay(capacity=rb["capacity"])
+                    buffer.buffer = deque(rb["data"], maxlen=rb["capacity"])
+
+                print(
+                    f"Resumed from episode {start_episode-1} | epsilon={epsilon:0.4f} | steps={step_count}"
+                )
+            else:
+                print("Starting training from scratch.")
+        else:
+            if os.path.exists(self.MODEL_FILE):
+                policy_dqn.load_state_dict(
+                    torch.load(self.MODEL_FILE, map_location=device)
+                )
+                target_dqn.load_state_dict(policy_dqn.state_dict())
+                policy_dqn.eval()
+                print(f"Loaded model weights from: {self.MODEL_FILE}")
+
+        return (
+            env,
+            policy_dqn,
+            target_dqn,
+            buffer,
+            epsilon,
+            rewards_per_episode,
+            epsilon_history,
+            best_reward,
+            start_episode,
+            step_count,
+        )
+
+    def save_model(
+        self,
+        policy_dqn,
+        target_dqn,
+        episode_reward,
+        episode,
+        best_reward,
+        rewards_per_episode,
+        epsilon_history,
+        buffer,
+        epsilon,
+        step_count,
+    ):
+
+        # Save model if we have a new best reward
+        if episode_reward > best_reward:
+            log_message = f"{datetime.now().strftime(DATE_FORMAT)}: New best reward {episode_reward:0.1f} ({(episode_reward-best_reward)/best_reward*100:+.1f}%) at episode {episode}, saving model..."
+            print(log_message)
+            with open(self.LOG_FILE, "a") as file:
+                file.write(log_message + "\n")
+            torch.save(policy_dqn.state_dict(), self.MODEL_FILE)
+
+        # Save checkpoint every 100 episodes (no custom-class pickling)
+        elif episode % 100 == 0:
+            checkpoint = {
+                "model_state_dict": policy_dqn.state_dict(),
+                "target_model_state_dict": target_dqn.state_dict(),
+                "optimizer_state_dict": self.optimizer.state_dict(),
+                "replay_buffer": {
+                    "capacity": buffer.capacity,
+                    "data": list(buffer.buffer),
+                },
+                "epsilon": epsilon,
+                "episode": episode,
+                "best_reward": best_reward,
+                "rewards_per_episode": rewards_per_episode,
+                "epsilon_history": epsilon_history,
+                "step_count": step_count,
+            }
+            torch.save(checkpoint, self.CHECKPOINT_FILE)
+            log_message = f"{datetime.now().strftime(DATE_FORMAT)}: Checkpoint saved at episode {episode}"
+            print(log_message)
+            with open(self.LOG_FILE, "a") as file:
+                file.write(log_message + "\n")
 
     def run(self, is_training=True, render=False):
         if is_training:
@@ -70,46 +221,21 @@ class Agent:
             with open(self.LOG_FILE, "w") as file:
                 file.write(log_message + "\n")
 
-        env = make_env(self.env_id, self.obs_type, render)
+        # Create environment and load model
+        (
+            env,
+            policy_dqn,
+            target_dqn,
+            buffer,
+            epsilon,
+            rewards_per_episode,
+            epsilon_history,
+            best_reward,
+            start_episode,
+            step_count,
+        ) = self.load_model(is_training=is_training, render=render)
 
-        state_dim = env.observation_space.shape[0]
-        action_dim = env.action_space.n
-
-        rewards_per_episode = []
-        epsilon_history = []
-
-        if self.obs_type == "pixel":
-            policy_dqn = Pixel_DQN(state_dim, action_dim).to(device)
-        else:
-            policy_dqn = DQN(state_dim, action_dim).to(device)
-
-        print(f"Running on device: {device}")
-
-        if is_training:
-            buffer = ExperienceReplay(capacity=self.replay_memory_size)
-            epsilon = self.epsilon_init
-
-            if self.obs_type == "pixel":
-                target_dqn = Pixel_DQN(state_dim, action_dim).to(device)
-            else:
-                target_dqn = DQN(state_dim, action_dim).to(device)
-            target_dqn.load_state_dict(policy_dqn.state_dict())
-
-            # Count the number of steps taken (for target network updates)
-            step_count = 0
-
-            # Use Adam optimizer for training the DQN
-            self.optimizer = torch.optim.Adam(
-                policy_dqn.parameters(), lr=self.learning_rate
-            )
-
-            best_reward = float("-inf")
-        else:
-            # Load the trained model for evaluation
-            policy_dqn.load_state_dict(torch.load(self.MODEL_FILE, map_location=device))
-            policy_dqn.eval()
-
-        for episode in itertools.count():
+        for episode in itertools.count(start_episode):
             state, _ = env.reset()
 
             # Keep observations as numpy on CPU to save VRAM.
@@ -164,17 +290,20 @@ class Agent:
             rewards_per_episode.append(episode_reward)
 
             if is_training:
-
+                self.save_model(
+                    policy_dqn,
+                    target_dqn,
+                    episode_reward,
+                    episode,
+                    best_reward,
+                    rewards_per_episode,
+                    epsilon_history,
+                    buffer,
+                    epsilon,
+                    step_count,
+                )
                 if episode_reward > best_reward:
-                    log_message = f"{datetime.now().strftime(DATE_FORMAT)}: New best reward {episode_reward:0.1f} ({(episode_reward-best_reward)/best_reward*100:+.1f}%) at episode {episode}, saving model..."
-                    print(log_message)
-                    with open(self.LOG_FILE, "a") as file:
-                        file.write(log_message + "\n")
-
-                    torch.save(policy_dqn.state_dict(), self.MODEL_FILE)
                     best_reward = episode_reward
-                elif episode % 100 == 0:
-                    torch.save(policy_dqn.state_dict(), self.CHECKPOINT_FILE)
 
                 # Update graph every x seconds
                 current_time = datetime.now()
@@ -198,12 +327,22 @@ class Agent:
         dones = torch.tensor(dones, dtype=torch.float32, device=device)
 
         with torch.no_grad():
-            target_q = (
-                rewards
-                + (1 - dones)
-                * self.discount_factor_g
-                * target_dqn(new_states).max(dim=1)[0]
-            )
+            if self.enable_double_dqn:
+                # Double DQN: action selection from policy_dqn, value from target_dqn
+                next_actions = policy_dqn(new_states).argmax(dim=1, keepdim=True)
+                target_q = (
+                    rewards
+                    + (1 - dones)
+                    * self.discount_factor_g
+                    * target_dqn(new_states).gather(1, next_actions).squeeze()
+                )
+            else:
+                target_q = (
+                    rewards
+                    + (1 - dones)
+                    * self.discount_factor_g
+                    * target_dqn(new_states).max(dim=1)[0]
+                )
 
         current_q = policy_dqn(states).gather(1, actions.unsqueeze(1)).squeeze()
 
