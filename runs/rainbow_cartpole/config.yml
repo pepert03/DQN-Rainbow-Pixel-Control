@@ -1,6 +1,7 @@
 discount_factor_g: 0.99
 enable_double_dqn: true
 enable_dueling_dqn: true
+enable_prioritized_replay: true
 env_id: CartPole-v1
 epsilon_decay: 0.99995
 epsilon_init: 0.3
@@ -10,4 +11,3 @@ mini_batch_size: 32
 network_sync_rate: 1000
 obs: state
 replay_memory_size: 100000
-enable_prioritized_replay: false

@@ -11,8 +11,9 @@ rainbow_states_walker2d:
   discount_factor_g: 0.99
   enable_double_dqn: true
   enable_dueling_dqn: true
+  enable_prioritized_replay: true
 
-pixel_walker2d:
+rainbow_pixel_walker2d:
   env_id: Walker2d-v5
   obs: pixel # options: pixel, state
   replay_memory_size: 200000
@@ -25,8 +26,9 @@ pixel_walker2d:
   discount_factor_g: 0.99
   enable_double_dqn: true
   enable_dueling_dqn: true
+  enable_prioritized_replay: true
 
-cartpole:
+rainbow_cartpole:
   env_id: CartPole-v1
   obs: state # options: pixel, state
   replay_memory_size: 100000
@@ -39,3 +41,4 @@ cartpole:
   discount_factor_g: 0.99
   enable_double_dqn: true
   enable_dueling_dqn: true
+  enable_prioritized_replay: true

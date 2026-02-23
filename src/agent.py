@@ -1,10 +1,11 @@
 import argparse
-from pyparsing import deque
+from collections import deque
 import torch
 from torch import nn
+import torch.nn.functional as F
 import gymnasium as gym
 from dqn import Pixel_DQN, DQN
-from buffer import ExperienceReplay
+from buffer import ExperienceReplay, PrioritizedExperienceReplay
 from wrappers import make_env
 import itertools
 import yaml
@@ -63,6 +64,17 @@ class Agent:
         self.discount_factor_g = config["discount_factor_g"]
         self.enable_double_dqn = config["enable_double_dqn"]
         self.enable_dueling_dqn = config["enable_dueling_dqn"]
+        self.enable_prioritized_replay = config["enable_prioritized_replay"]
+
+        # Prioritized replay (optional keys; defaults match PrioritizedExperienceReplay)
+        self.prioritized_replay_alpha = float(
+            config.get("prioritized_replay_alpha", 0.6)
+        )
+        self.prioritized_replay_beta = float(config.get("prioritized_replay_beta", 0.4))
+        self.prioritized_replay_beta_increment = float(
+            config.get("prioritized_replay_beta_increment", 0.0)
+        )
+        self.prioritized_replay_eps = float(config.get("prioritized_replay_eps", 1e-6))
 
         self.optimizer = None
         self.loss_fn = nn.MSELoss()
@@ -102,7 +114,14 @@ class Agent:
         target_dqn.load_state_dict(policy_dqn.state_dict())
 
         # Training-only state
-        buffer = ExperienceReplay(capacity=self.replay_memory_size)
+        if self.enable_prioritized_replay:
+            buffer = PrioritizedExperienceReplay(
+                capacity=self.replay_memory_size,
+                alpha=self.prioritized_replay_alpha,
+                beta=self.prioritized_replay_beta,
+            )
+        else:
+            buffer = ExperienceReplay(capacity=self.replay_memory_size)
         epsilon = self.epsilon_init
         step_count = 0
         if is_training:
@@ -136,8 +155,20 @@ class Agent:
 
                 rb = checkpoint.get("replay_buffer")
                 if rb is not None:
-                    buffer = ExperienceReplay(capacity=rb["capacity"])
-                    buffer.buffer = deque(rb["data"], maxlen=rb["capacity"])
+                    if self.enable_prioritized_replay:
+                        buffer = PrioritizedExperienceReplay(
+                            capacity=rb["capacity"],
+                            alpha=float(rb.get("alpha", self.prioritized_replay_alpha)),
+                            beta=float(rb.get("beta", self.prioritized_replay_beta)),
+                        )
+                        buffer.buffer = deque(rb["data"], maxlen=rb["capacity"])
+                        prios = rb.get("priorities")
+                        if prios is None:
+                            prios = [1.0 for _ in range(len(buffer.buffer))]
+                        buffer.priorities = deque(prios, maxlen=rb["capacity"])
+                    else:
+                        buffer = ExperienceReplay(capacity=rb["capacity"])
+                        buffer.buffer = deque(rb["data"], maxlen=rb["capacity"])
 
                 print(
                     f"Resumed from episode {start_episode-1} | epsilon={epsilon:0.4f} | steps={step_count}"
@@ -190,14 +221,25 @@ class Agent:
 
         # Save checkpoint every 100 episodes (no custom-class pickling)
         elif episode % 100 == 0:
+            replay_state = {
+                "capacity": buffer.capacity,
+                "data": list(buffer.buffer),
+            }
+            if self.enable_prioritized_replay and isinstance(
+                buffer, PrioritizedExperienceReplay
+            ):
+                replay_state.update(
+                    {
+                        "priorities": list(buffer.priorities),
+                        "alpha": float(buffer.alpha),
+                        "beta": float(buffer.beta),
+                    }
+                )
             checkpoint = {
                 "model_state_dict": policy_dqn.state_dict(),
                 "target_model_state_dict": target_dqn.state_dict(),
                 "optimizer_state_dict": self.optimizer.state_dict(),
-                "replay_buffer": {
-                    "capacity": buffer.capacity,
-                    "data": list(buffer.buffer),
-                },
+                "replay_buffer": replay_state,
                 "epsilon": epsilon,
                 "episode": episode,
                 "best_reward": best_reward,
@@ -274,8 +316,23 @@ class Agent:
 
                     # Optimize every step once we have enough data
                     if len(buffer) > self.mini_batch_size:
-                        mini_batch = buffer.sample(self.mini_batch_size)
-                        self.optimize(mini_batch, policy_dqn, target_dqn)
+                        if self.enable_prioritized_replay and isinstance(
+                            buffer, PrioritizedExperienceReplay
+                        ):
+                            mini_batch, indices, weights = buffer.sample(
+                                self.mini_batch_size
+                            )
+                            self.optimize(
+                                mini_batch,
+                                policy_dqn,
+                                target_dqn,
+                                buffer=buffer,
+                                indices=indices,
+                                weights=weights,
+                            )
+                        else:
+                            mini_batch = buffer.sample(self.mini_batch_size)
+                            self.optimize(mini_batch, policy_dqn, target_dqn)
 
                         epsilon = max(epsilon * self.epsilon_decay, self.epsilon_min)
                         epsilon_history.append(epsilon)
@@ -313,7 +370,15 @@ class Agent:
 
         env.close()
 
-    def optimize(self, mini_batch, policy_dqn, target_dqn):
+    def optimize(
+        self,
+        mini_batch,
+        policy_dqn,
+        target_dqn,
+        buffer: Any | None = None,
+        indices: list[int] | None = None,
+        weights: list[float] | None = None,
+    ):
 
         states, actions, rewards, next_states, dones = zip(*mini_batch)
 
@@ -346,7 +411,30 @@ class Agent:
 
         current_q = policy_dqn(states).gather(1, actions.unsqueeze(1)).squeeze()
 
-        loss = self.loss_fn(current_q, target_q)
+        td_errors = current_q - target_q
+
+        if weights is not None:
+            w = torch.tensor(weights, dtype=torch.float32, device=device)
+            per_sample_loss = td_errors.pow(2)
+            loss = (w * per_sample_loss).mean()
+        else:
+            loss = self.loss_fn(current_q, target_q)
+
+        # Update PER priorities from absolute TD error
+        if (
+            buffer is not None
+            and indices is not None
+            and self.enable_prioritized_replay
+            and isinstance(buffer, PrioritizedExperienceReplay)
+        ):
+            new_priorities = (
+                td_errors.detach().abs().cpu().numpy() + self.prioritized_replay_eps
+            ).tolist()
+            buffer.update_priorities(indices, new_priorities)
+            if self.prioritized_replay_beta_increment > 0.0:
+                buffer.beta = min(
+                    1.0, buffer.beta + self.prioritized_replay_beta_increment
+                )
 
         # Optimize the model
         self.optimizer.zero_grad()

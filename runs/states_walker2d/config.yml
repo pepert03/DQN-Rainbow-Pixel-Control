@@ -10,3 +10,4 @@ obs: state
 replay_memory_size: 200000
 enable_double_dqn: false
 enable_dueling_dqn: false
+enable_prioritized_replay: false

@@ -95,8 +95,8 @@ def make_state_env(env_id, render=False, seed=42):
         env = gym.make(
             env_id,
             render_mode="human" if render else None,
-            # healthy_angle_range=(-0.4, 0.4),
-            # max_episode_steps=1500,
+            healthy_angle_range=(-0.4, 0.4),
+            max_episode_steps=1500,
         )
         env = WalkerReward(env)
     else:

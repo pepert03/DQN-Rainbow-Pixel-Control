@@ -10,3 +10,4 @@ mini_batch_size: 64
 network_sync_rate: 2000
 obs: pixel
 replay_memory_size: 200000
+enable_prioritized_replay: false
