@@ -138,8 +138,10 @@ def make_pixel_env(env_id, render=False, seed=42):
     # ResizeObservation receives an image (Box), not a dict
     env = ResizeObservation(env, (84, 84))
 
-    # Discretize actions (Fixed class name here)
-    env = DiscretizedActionWrapper(env, bins=3)
+    # Discretize actions only for continuous-control envs (MuJoCo Box).
+    # For discrete-action envs (e.g., CartPole), keep the original Discrete action space.
+    if isinstance(env.action_space, Box):
+        env = DiscretizedActionWrapper(env, bins=3)
 
     # Stack frames
     env = FrameStackObservation(env, stack_size=4)
