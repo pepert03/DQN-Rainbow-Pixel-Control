@@ -219,7 +219,10 @@ class Agent:
                     checkpoint_file, map_location=device, weights_only=False
                 )
                 policy_dqn.load_state_dict(checkpoint["model_state_dict"])
-                target_dqn.load_state_dict(checkpoint["target_model_state_dict"])
+                if "target_model_state_dict" in checkpoint:
+                    target_dqn.load_state_dict(checkpoint["target_model_state_dict"])
+                else:
+                    target_dqn.load_state_dict(policy_dqn.state_dict())
                 self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
                 epsilon = float(checkpoint.get("epsilon", epsilon))
                 step_count = int(checkpoint.get("step_count", step_count))
@@ -227,23 +230,6 @@ class Agent:
                 best_reward = float(checkpoint.get("best_reward", best_reward))
                 rewards_per_episode = list(checkpoint.get("rewards_per_episode", []))
                 epsilon_history = list(checkpoint.get("epsilon_history", []))
-
-                rb = checkpoint.get("replay_buffer")
-                if rb is not None:
-                    if self.enable_prioritized_replay:
-                        buffer = PrioritizedExperienceReplay(
-                            capacity=rb["capacity"],
-                            alpha=float(rb.get("alpha", self.prioritized_replay_alpha)),
-                            beta=float(rb.get("beta", self.prioritized_replay_beta)),
-                        )
-                        buffer.buffer = deque(rb["data"], maxlen=rb["capacity"])
-                        prios = rb.get("priorities")
-                        if prios is None:
-                            prios = [1.0 for _ in range(len(buffer.buffer))]
-                        buffer.priorities = deque(prios, maxlen=rb["capacity"])
-                    else:
-                        buffer = ExperienceReplay(capacity=rb["capacity"])
-                        buffer.buffer = deque(rb["data"], maxlen=rb["capacity"])
 
                 print(
                     f"Resumed from episode {start_episode-1} | epsilon={epsilon:0.4f} | steps={step_count}"
@@ -281,7 +267,6 @@ class Agent:
         best_reward,
         rewards_per_episode,
         epsilon_history,
-        buffer,
         epsilon,
         step_count,
     ):
@@ -296,27 +281,9 @@ class Agent:
 
         # Save checkpoint every 100 episodes (no custom-class pickling)
         elif episode % 100 == 0:
-            empty_buffer = ExperienceReplay(capacity=self.replay_memory_size)
-            replay_state = None
-            if self.enable_prioritized_replay:
-                replay_state = {
-                    "capacity": buffer.capacity,
-                    "data": list(buffer.buffer),
-                    "priorities": list(buffer.priorities),
-                    "alpha": buffer.alpha,
-                    "beta": buffer.beta,
-                }
-            else:
-                replay_state = {
-                    "capacity": buffer.capacity,
-                    "data": list(buffer.buffer),
-                }
-                
             checkpoint = {
                 "model_state_dict": policy_dqn.state_dict(),
-                "target_model_state_dict": target_dqn.state_dict(),
                 "optimizer_state_dict": self.optimizer.state_dict(),
-                "replay_buffer": replay_state,
                 "epsilon": epsilon,
                 "episode": episode,
                 "best_reward": best_reward,
@@ -324,9 +291,11 @@ class Agent:
                 "epsilon_history": epsilon_history,
                 "step_count": step_count,
             }
-            # Change last checkpint to last_checkpoint for backup, in case saving is interrupted
             if os.path.exists(self.CHECKPOINT_FILE):
-                os.replace(self.CHECKPOINT_FILE, self.CHECKPOINT_FILE + ".backup")
+                os.remove(self.CHECKPOINT_FILE)
+            backup_file = self.CHECKPOINT_FILE + ".backup"
+            if os.path.exists(backup_file):
+                os.remove(backup_file)
             torch.save(checkpoint, self.CHECKPOINT_FILE)
             log_message = f"{datetime.now().strftime(DATE_FORMAT)}: Checkpoint saved at episode {episode}"
             print(log_message)
@@ -416,8 +385,8 @@ class Agent:
 
                         # When we have enough transitions, push one aggregated n-step experience
                         if len(n_step_buffer) >= self.n_step:
-                            s0, a0, r_n, ns_n, d_n, steps_used = self._n_step_transition(
-                                n_step_buffer
+                            s0, a0, r_n, ns_n, d_n, steps_used = (
+                                self._n_step_transition(n_step_buffer)
                             )
                             buffer.push(s0, a0, r_n, ns_n, d_n, n_steps=steps_used)
                             n_step_buffer.popleft()
@@ -428,12 +397,12 @@ class Agent:
                                 s0, a0, r_n, ns_n, d_n, steps_used = (
                                     self._n_step_transition(n_step_buffer)
                                 )
-                                buffer.push(
-                                    s0, a0, r_n, ns_n, d_n, n_steps=steps_used
-                                )
+                                buffer.push(s0, a0, r_n, ns_n, d_n, n_steps=steps_used)
                                 n_step_buffer.popleft()
                     else:
-                        buffer.push(state, action, reward, next_state, done_flag, n_steps=1)
+                        buffer.push(
+                            state, action, reward, next_state, done_flag, n_steps=1
+                        )
 
                     # Optimize every step once we have enough data
                     if len(buffer) > self.mini_batch_size:
@@ -476,7 +445,6 @@ class Agent:
                     best_reward,
                     rewards_per_episode,
                     epsilon_history,
-                    buffer,
                     epsilon,
                     step_count,
                 )
@@ -612,9 +580,7 @@ class Agent:
                 else:
                     target_q = (
                         rewards
-                        + (1 - dones)
-                        * gamma_ns
-                        * target_dqn(new_states).max(dim=1)[0]
+                        + (1 - dones) * gamma_ns * target_dqn(new_states).max(dim=1)[0]
                     )
 
             current_q = policy_dqn(states).gather(1, actions.unsqueeze(1)).squeeze()
