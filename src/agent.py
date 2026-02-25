@@ -296,20 +296,22 @@ class Agent:
 
         # Save checkpoint every 100 episodes (no custom-class pickling)
         elif episode % 100 == 0:
-            replay_state = {
-                "capacity": buffer.capacity,
-                "data": list(buffer.buffer),
-            }
-            if self.enable_prioritized_replay and isinstance(
-                buffer, PrioritizedExperienceReplay
-            ):
-                replay_state.update(
-                    {
-                        "priorities": list(buffer.priorities),
-                        "alpha": float(buffer.alpha),
-                        "beta": float(buffer.beta),
-                    }
-                )
+            empty_buffer = ExperienceReplay(capacity=self.replay_memory_size)
+            replay_state = None
+            if self.enable_prioritized_replay:
+                replay_state = {
+                    "capacity": buffer.capacity,
+                    "data": list(buffer.buffer),
+                    "priorities": list(buffer.priorities),
+                    "alpha": buffer.alpha,
+                    "beta": buffer.beta,
+                }
+            else:
+                replay_state = {
+                    "capacity": buffer.capacity,
+                    "data": list(buffer.buffer),
+                }
+                
             checkpoint = {
                 "model_state_dict": policy_dqn.state_dict(),
                 "target_model_state_dict": target_dqn.state_dict(),
@@ -322,6 +324,9 @@ class Agent:
                 "epsilon_history": epsilon_history,
                 "step_count": step_count,
             }
+            # Change last checkpint to last_checkpoint for backup, in case saving is interrupted
+            if os.path.exists(self.CHECKPOINT_FILE):
+                os.replace(self.CHECKPOINT_FILE, self.CHECKPOINT_FILE + ".backup")
             torch.save(checkpoint, self.CHECKPOINT_FILE)
             log_message = f"{datetime.now().strftime(DATE_FORMAT)}: Checkpoint saved at episode {episode}"
             print(log_message)

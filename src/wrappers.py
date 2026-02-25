@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 import gymnasium as gym
 from gymnasium.spaces import Discrete, Box
@@ -59,6 +60,28 @@ class DiscretizedActionWrapper(gym.ActionWrapper):
     def action(self, action_index):
         # Mapea el entero que devuelve la DQN al vector continuo para MuJoCo
         return self.actions_grid[action_index]
+
+
+class OpenCVRenderWrapper(gym.Wrapper):
+    """Muestra el renderizado en una ventana flotante usando OpenCV."""
+    def __init__(self, env, window_name="MuJoCo Preview"):
+        super().__init__(env)
+        self.window_name = window_name
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        img = self.env.render()
+        if img is not None:
+            # Convertir RGB a BGR para OpenCV y redimensionar para ver mejor
+            img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            img_bgr = cv2.resize(img_bgr, (480, 480), interpolation=cv2.INTER_NEAREST)
+            cv2.imshow(self.window_name, img_bgr)
+            cv2.waitKey(1)
+        return obs, reward, terminated, truncated, info
+    
+    def close(self):
+        cv2.destroyAllWindows()
+        return self.env.close()
 
 
 class WalkerReward(gym.Wrapper):
@@ -147,7 +170,8 @@ def make_pixel_env(env_id, render=False, seed=42):
     env = FrameStackObservation(env, stack_size=4)
 
     if render:
-        env = HumanRendering(env)
+        # env = HumanRendering(env)
+        env = OpenCVRenderWrapper(env)
 
     env.action_space.seed(seed)
     env.observation_space.seed(seed)
