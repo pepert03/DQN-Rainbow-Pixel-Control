@@ -1,10 +1,10 @@
 discount_factor_g: 0.99
-enable_distributional: false
-enable_double_dqn: false
-enable_dueling_dqn: false
-enable_n_step: false
-enable_noisy_nets: false
-enable_prioritized_replay: false
+enable_distributional: true
+enable_double_dqn: true
+enable_dueling_dqn: true
+enable_n_step: true
+enable_noisy_nets: true
+enable_prioritized_replay: true
 env_id: Walker2d-v5
 epsilon_decay: 0.999995
 epsilon_init: 1.0
