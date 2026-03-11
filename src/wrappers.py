@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import gymnasium as gym
 from gymnasium.spaces import Discrete, Box
+from gymnasium.vector import SyncVectorEnv
 
 from gymnasium.wrappers import (
     AddRenderObservation,
@@ -53,9 +54,6 @@ class DiscretizedActionWrapper(gym.ActionWrapper):
         # 3. Definimos el nuevo espacio de acción discreto
         # Para bins=3 y n_dims=6, esto será Discrete(13)
         self.action_space = Discrete(len(self.actions_grid))
-        print(
-            f"DiscretizedActionWrapper initialized with {len(self.actions_grid)} discrete actions."
-        )
 
     def action(self, action_index):
         # Mapea el entero que devuelve la DQN al vector continuo para MuJoCo
@@ -64,6 +62,7 @@ class DiscretizedActionWrapper(gym.ActionWrapper):
 
 class OpenCVRenderWrapper(gym.Wrapper):
     """Muestra el renderizado en una ventana flotante usando OpenCV."""
+
     def __init__(self, env, window_name="MuJoCo Preview"):
         super().__init__(env)
         self.window_name = window_name
@@ -78,7 +77,7 @@ class OpenCVRenderWrapper(gym.Wrapper):
             cv2.imshow(self.window_name, img_bgr)
             cv2.waitKey(1)
         return obs, reward, terminated, truncated, info
-    
+
     def close(self):
         cv2.destroyAllWindows()
         return self.env.close()
@@ -185,3 +184,68 @@ def make_env(env_id, obs_type, render=False, seed=42):
         return make_state_env(env_id, render, seed)
     else:
         raise ValueError(f"Unsupported obs_type: {obs_type}")
+
+
+def make_vec_env(env_id, obs_type, num_envs=1, seed=42):
+    """Create a vectorized environment with num_envs parallel sub-envs."""
+    if obs_type == "pixel":
+        maker = _make_single_pixel_env
+    elif obs_type == "state":
+        maker = _make_single_state_env
+    else:
+        raise ValueError(f"Unsupported obs_type: {obs_type}")
+
+    def _thunk(idx):
+        def fn():
+            return maker(env_id, seed=seed + idx)
+
+        return fn
+
+    return SyncVectorEnv([_thunk(i) for i in range(num_envs)])
+
+
+def _make_single_state_env(env_id, seed=42):
+    """Create a single state-based env (for use inside SyncVectorEnv)."""
+    if "Walker2d-v5" in env_id:
+        env = gym.make(
+            env_id,
+            render_mode=None,
+            healthy_angle_range=(-0.4, 0.4),
+            max_episode_steps=1500,
+        )
+        env = WalkerReward(env)
+    else:
+        env = gym.make(env_id, render_mode=None)
+
+    if isinstance(env.action_space, Box):
+        env = DiscretizedActionWrapper(env, bins=3)
+
+    env.action_space.seed(seed)
+    env.observation_space.seed(seed)
+    return env
+
+
+def _make_single_pixel_env(env_id, seed=42):
+    """Create a single pixel-based env (for use inside SyncVectorEnv)."""
+    if "Walker2d-v5" in env_id:
+        env = gym.make(
+            env_id,
+            render_mode="rgb_array",
+            healthy_angle_range=(-0.4, 0.4),
+            max_episode_steps=1500,
+        )
+        env = WalkerReward(env)
+    else:
+        env = gym.make(env_id, render_mode="rgb_array")
+
+    env = AddRenderObservation(env, render_only=True)
+    env = ResizeObservation(env, (84, 84))
+
+    if isinstance(env.action_space, Box):
+        env = DiscretizedActionWrapper(env, bins=3)
+
+    env = FrameStackObservation(env, stack_size=4)
+
+    env.action_space.seed(seed)
+    env.observation_space.seed(seed)
+    return env

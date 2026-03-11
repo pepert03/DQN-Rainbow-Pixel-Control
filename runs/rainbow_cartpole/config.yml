@@ -1,0 +1,17 @@
+discount_factor_g: 0.99
+enable_distributional: true
+enable_double_dqn: true
+enable_dueling_dqn: true
+enable_n_step: false
+enable_noisy_nets: true
+enable_prioritized_replay: true
+env_id: CartPole-v1
+epsilon_decay: 0.99995
+epsilon_init: 0.3
+epsilon_min: 0.05
+learning_rate: 0.0001
+mini_batch_size: 32
+network_sync_rate: 1000
+num_envs: 12
+obs: pixel
+replay_memory_size: 100000

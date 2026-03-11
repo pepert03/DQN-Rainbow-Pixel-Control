@@ -1,4 +1,10 @@
 discount_factor_g: 0.99
+enable_distributional: false
+enable_double_dqn: false
+enable_dueling_dqn: false
+enable_n_step: false
+enable_noisy_nets: false
+enable_prioritized_replay: false
 env_id: Walker2d-v5
 epsilon_decay: 0.99999
 epsilon_init: 1.0
@@ -6,8 +12,6 @@ epsilon_min: 0.01
 learning_rate: 0.0001
 mini_batch_size: 64
 network_sync_rate: 2000
+num_envs: 30
 obs: state
 replay_memory_size: 200000
-enable_double_dqn: false
-enable_dueling_dqn: false
-enable_prioritized_replay: false
