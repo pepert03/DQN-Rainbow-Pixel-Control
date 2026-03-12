@@ -46,38 +46,68 @@ In pixel mode the env produces observations shaped like `[stack, H, W, C]`.
 With `stack_size=4` and RGB (`C=3`), the effective input channels are $4 \times 3 = 12$.
 That is why the CNN starts with `Conv2d(12, ...)`.
 
-## Rainbow DQN note
+## Rainbow DQN extensions
 
-TODO
+On top of vanilla DQN, the following improvements can be toggled independently via `configs/hyperparameters.yml`:
+
+| Flag | Technique |
+|---|---|
+| `enable_double_dqn` | Double DQN — decouples action selection from evaluation to reduce overestimation |
+| `enable_dueling_dqn` | Dueling architecture — separate value and advantage streams |
+| `enable_prioritized_replay` | Prioritized Experience Replay (PER) — sample important transitions more often |
+| `enable_noisy_nets` | NoisyNets — learned exploration via stochastic linear layers |
+| `enable_distributional` | C51 — categorical distributional RL |
+| `enable_n_step` | Multi-step returns — accumulate rewards over $n$ steps |
+
+When **any** Rainbow flag is enabled the CLI automatically uses `RainbowAgent`; otherwise it uses the lightweight `DQNAgent`.
 
 ## Repository structure
 
 ```
 .
-├─ configs/
-│  └─ hyperparameters.yml      # presets (env_id, obs, hyperparameters)
-├─ runs/                       # outputs: .pt models, logs, plots
-├─ src/
-│  ├─ agent.py                 # main entrypoint: train/eval
-│  ├─ dqn.py                   # networks: DQN (state) + Pixel_DQN (CNN)
-│  ├─ buffer.py                # simple replay buffer
-│  ├─ wrappers.py              # wrappers + env factories (state/pixel)
-│  ├─ buffers.py, dqn_mujoco.py # additional experiments (may be WIP)
-│  └─ __init__.py
-├─ mujoco_test.py              # minimal MuJoCo viewer sanity check
-├─ wrapper_try.py              # minimal Gymnasium human-render example
-├─ notebooks/                  # notebooks (exploration/debug)
-└─ Report/                     # report/latex
+├── main.py                    # CLI entry point (train / evaluate)
+├── pyproject.toml             # Dependencies and project metadata
+├── configs/
+│   └── hyperparameters.yml    # Run presets (env, obs type, hyperparameters)
+├── runs/                      # Generated outputs (one folder per run)
+│   └── <run_name>/
+│       ├── config.yml         # Frozen copy of the configuration used
+│       ├── best_model.pt      # Best model weights (by episodic return)
+│       ├── checkpoint.pt      # Periodic checkpoint (resumable)
+│       ├── training.log       # Plain-text training log
+│       ├── graph.png          # Reward + epsilon plot
+│       └── tensorboard/       # TensorBoard logs (if generated)
+├── src/
+│   ├── __init__.py
+│   ├── config.py              # Config loading, paths, device selection
+│   ├── networks.py            # DQN (MLP), Pixel_DQN (CNN), NoisyLinear
+│   ├── buffer.py              # Experience Replay (circular buffer)
+│   ├── wrappers.py            # Env wrappers + factory functions
+│   ├── utils.py               # Plotting helpers (save_graph)
+│   ├── dqn/
+│   │   ├── __init__.py
+│   │   └── train.py           # DQNAgent — vanilla DQN training & evaluation
+│   └── rainbow/
+│       ├── __init__.py
+│       ├── buffer.py          # PrioritizedExperienceReplay
+│       └── train.py           # RainbowAgent — Rainbow DQN training & evaluation
+├── notebooks/                 # Exploration / debug notebooks
+└── Report/                    # LaTeX report
 ```
 
 ### What gets saved to `runs/`?
 
-`src/agent.py` saves:
+Each preset creates its own folder under `runs/<preset_name>/` containing:
 
-- `runs/<preset>.pt`: best model so far (by episodic return).
-- `runs/<preset>_checkpoint.pt`: periodic checkpoint.
-- `runs/<preset>.log`: training log.
-- `runs/<preset>.png`: plot (mean return + epsilon).
+| File | Description |
+|---|---|
+| `config.yml` | Frozen copy of the hyperparameters used for the run |
+| `best_model.pt` | Model weights with the highest episodic return so far |
+| `checkpoint.pt` | Full training state (model, optimizer, epsilon, episode, rewards) — saved every 100 episodes, allows resuming |
+| `training.log` | Timestamped log entries (new bests, checkpoints) |
+| `graph.png` | Plot with mean reward (100-episode window) and epsilon decay |
+
+Training is **automatically resumable**: if `runs/<preset>/checkpoint.pt` exists, the agent restores its full state and continues from the last saved episode.
 
 ## Installation
 
@@ -86,7 +116,7 @@ TODO
 - Python >= 3.10
 - MuJoCo via `gymnasium[mujoco]` (installed as a dependency)
 
-### `uv`
+### Setup with `uv`
 
 ```bash
 git clone https://github.com/pepert03/DQN-Rainbow-Pixel-Control
@@ -97,31 +127,43 @@ uv sync
 
 ## Usage
 
-### 1) Choose a preset (env + obs + hyperparameters)
+All commands are run from the repository root via `main.py`.
 
-Edit `configs/hyperparameters.yml`. Examples:
+### 1) Choose a preset
 
-- `walker2d`: `env_id: Walker2d-v5`, `obs: pixel`
-- `humanoid`: `env_id: Humanoid-v5`, `obs: state`
-- `cartpole`: `env_id: CartPole-v1`, `obs: state`
+Presets are defined in `configs/hyperparameters.yml`. Each preset specifies the environment, observation type, and all hyperparameters. Available presets (out of the box):
+
+| Preset | Environment | Obs | Rainbow |
+|---|---|---|---|
+| `walker2d` | Walker2d-v5 | pixel | No |
+| `rainbow_pixel_walker2d` | Walker2d-v5 | pixel | Yes |
+| `rainbow_states_walker2d` | Walker2d-v5 | state | Yes |
+| `rainbow_cartpole` | CartPole-v1 | pixel | Yes |
 
 ### 2) Training
 
-From the repo root:
-
 ```bash
-uv run python ./src/agent.py walker2d --train
+# Vanilla DQN
+python main.py walker2d --train
+
+# Rainbow DQN
+python main.py rainbow_pixel_walker2d --train
+
+# With uv
+uv run python main.py walker2d --train
 ```
 
 ### 3) Evaluation (with rendering)
 
-Run the agent in evaluation mode (loads `runs/<preset>.pt`):
+Loads the best saved model from `runs/<preset>/best_model.pt` and renders the agent:
 
 ```bash
-uv run python ./src/agent.py walker2d
+python main.py walker2d
+
+uv run python main.py rainbow_states_walker2d
 ```
 
 Notes:
 
-- In **pixel** mode, the wrapper creates the env with `render_mode="rgb_array"` to obtain frames, and optionally uses `HumanRendering` to display.
-- In **state** mode, the env uses `render_mode="human"` when `render=True`.
+- In **pixel** mode, the wrapper creates the env with `render_mode="rgb_array"` to obtain frames, and uses an OpenCV window for live preview.
+- In **state** mode, the env uses `render_mode="human"` when rendering.

@@ -104,10 +104,6 @@ class Pixel_DQN(nn.Module):
             self.fc3 = Linear(7 * 7 * 64, out_q)
 
     def forward(self, x):
-        # img = x[0, 0].cpu().numpy()  # Shape: [84, 84, 3]
-        # from PIL import Image
-        # Image.fromarray(img.astype("uint8")).save("debug_input.png")
-
         # Ensure input is a float tensor on the correct device
         if not isinstance(x, torch.Tensor):
             x = torch.tensor(
@@ -201,10 +197,3 @@ class NoisyLinear(nn.Module):
             weight = self.weight_mu
             bias = self.bias_mu
         return F.linear(x, weight, bias)
-
-
-if __name__ == "__main__":
-    state_dim = 17  # Example state dimension for HalfCheetah-v5
-    action_dim = 6  # Example action dimension for HalfCheetah-v5
-    model = Pixel_DQN(state_dim, action_dim)
-    print(model)

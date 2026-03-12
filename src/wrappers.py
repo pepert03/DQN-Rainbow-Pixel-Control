@@ -64,6 +64,7 @@ class DiscretizedActionWrapper(gym.ActionWrapper):
 
 class OpenCVRenderWrapper(gym.Wrapper):
     """Muestra el renderizado en una ventana flotante usando OpenCV."""
+
     def __init__(self, env, window_name="MuJoCo Preview"):
         super().__init__(env)
         self.window_name = window_name
@@ -78,7 +79,7 @@ class OpenCVRenderWrapper(gym.Wrapper):
             cv2.imshow(self.window_name, img_bgr)
             cv2.waitKey(1)
         return obs, reward, terminated, truncated, info
-    
+
     def close(self):
         cv2.destroyAllWindows()
         return self.env.close()
