@@ -151,7 +151,7 @@ def make_state_env(env_id, render=False, seed=42):
             env_id,
             render_mode="human" if render else None,
             healthy_angle_range=(-0.4, 0.4),
-            max_episode_steps=1500,
+            max_episode_steps=2500,
         )
         env = WalkerReward(env)
     else:
@@ -180,7 +180,7 @@ def make_pixel_env(env_id, render=False, seed=42):
             width=obs_size,
             height=obs_size,
             healthy_angle_range=(-0.4, 0.4),
-            max_episode_steps=1500,
+            max_episode_steps=2500,
         )
         env = WalkerReward(env)
     else:
