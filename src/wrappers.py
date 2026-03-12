@@ -62,6 +62,37 @@ class DiscretizedActionWrapper(gym.ActionWrapper):
         return self.actions_grid[action_index]
 
 
+class GrayscaleWrapper(gym.ObservationWrapper):
+    """Convert RGB observations to grayscale using cv2 (faster than numpy)."""
+
+    def __init__(self, env):
+        super().__init__(env)
+        obs_shape = self.observation_space.shape  # (H, W, 3)
+        self.observation_space = Box(
+            low=0, high=255, shape=(obs_shape[0], obs_shape[1]), dtype=np.uint8
+        )
+
+    def observation(self, obs):
+        return cv2.cvtColor(obs, cv2.COLOR_RGB2GRAY)
+
+
+class RenderGrayscaleWrapper(gym.ObservationWrapper):
+    """Replace obs with grayscale render in a single wrapper.
+    Expects env created with render_mode='rgb_array' and width/height
+    already set to target resolution so no resize is needed."""
+
+    def __init__(self, env, obs_size=84):
+        super().__init__(env)
+        self._obs_size = obs_size
+        self.observation_space = Box(
+            low=0, high=255, shape=(obs_size, obs_size), dtype=np.uint8
+        )
+
+    def observation(self, obs):
+        frame = self.env.render()  # already at target resolution
+        return cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+
+
 class OpenCVRenderWrapper(gym.Wrapper):
     """Muestra el renderizado en una ventana flotante usando OpenCV."""
 
@@ -138,29 +169,25 @@ def make_state_env(env_id, render=False, seed=42):
 def make_pixel_env(env_id, render=False, seed=42):
     """
     Creates env with Pixel observation + Discretization + Stack.
-    This function returns a thunk for use with SyncVectorEnv.
+    Renders directly at 84x84 to avoid expensive high-res render + resize.
     """
-    # MuJoCo environments require render_mode to be set at creation time.
-    # IMPORTANT: AddRenderObservation needs env.render() to return an RGB array,
-    # which is not the case for render_mode="human".
-    # So we always create the env with render_mode="rgb_array" for pixel obs.
+    obs_size = 84
 
     if "Walker2d-v5" in env_id:
         env = gym.make(
             env_id,
             render_mode="rgb_array",
+            width=obs_size,
+            height=obs_size,
             healthy_angle_range=(-0.4, 0.4),
             max_episode_steps=1500,
         )
         env = WalkerReward(env)
     else:
-        env = gym.make(env_id, render_mode="rgb_array")
+        env = gym.make(env_id, render_mode="rgb_array", width=obs_size, height=obs_size)
 
-    # render_only=True makes the observation be the rendered frame
-    env = AddRenderObservation(env, render_only=True)
-
-    # ResizeObservation receives an image (Box), not a dict
-    env = ResizeObservation(env, (84, 84))
+    # Single wrapper: render → grayscale (no resize needed, already 84x84)
+    env = RenderGrayscaleWrapper(env, obs_size=obs_size)
 
     # Discretize actions only for continuous-control envs (MuJoCo Box).
     # For discrete-action envs (e.g., CartPole), keep the original Discrete action space.
@@ -189,7 +216,9 @@ def make_env(env_id, obs_type, render=False, seed=42):
 
 
 def make_vec_env(env_id, obs_type, num_envs, seed=42):
-    """Create a SyncVectorEnv with num_envs parallel environments."""
+    """Create a vectorized environment with num_envs parallel environments.
+    Uses AsyncVectorEnv for pixel obs (parallel rendering in subprocesses)
+    and SyncVectorEnv for state obs."""
 
     def _make_thunk(idx):
         def _thunk():
@@ -197,4 +226,9 @@ def make_vec_env(env_id, obs_type, num_envs, seed=42):
 
         return _thunk
 
-    return gym.vector.SyncVectorEnv([_make_thunk(i) for i in range(num_envs)])
+    thunks = [_make_thunk(i) for i in range(num_envs)]
+    if obs_type == "pixel":
+        # SyncVectorEnv for pixel: avoids per-subprocess OpenGL context
+        # limits (MuJoCo framebuffer crash on Windows with many envs).
+        return gym.vector.SyncVectorEnv(thunks)
+    return gym.vector.SyncVectorEnv(thunks)

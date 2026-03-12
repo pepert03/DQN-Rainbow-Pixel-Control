@@ -69,7 +69,7 @@ class DQN(nn.Module):
 class Pixel_DQN(nn.Module):
     def __init__(
         self,
-        state_dim,
+        obs_shape,
         action_dim,
         hidden_dim=512,
         enable_dueling_dqn=False,
@@ -84,8 +84,18 @@ class Pixel_DQN(nn.Module):
         self.num_atoms = num_atoms
         self.action_dim = action_dim
 
+        # Detect input channels from obs shape
+        # Grayscale stacked: (stack, H, W)  → in_channels = stack
+        # RGB stacked:       (stack, H, W, C) → in_channels = stack * C
+        if len(obs_shape) == 3:
+            in_channels = obs_shape[0]
+            self._needs_permute = False
+        else:  # len == 4  →  (stack, H, W, C)
+            in_channels = obs_shape[0] * obs_shape[3]
+            self._needs_permute = True
+
         # Convolutional layers for pixel input
-        self.conv1 = nn.Conv2d(12, 32, kernel_size=8, stride=4)  # 4 frames * 3 channels
+        self.conv1 = nn.Conv2d(in_channels, 32, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
 
@@ -110,19 +120,13 @@ class Pixel_DQN(nn.Module):
                 x, dtype=torch.float32, device=next(self.parameters()).device
             )
 
-        # x shape received from Gym: [Batch, Stack, Height, Width, Channel]
-        # Example: [1, 4, 84, 84, 3]
+        if self._needs_permute:
+            # RGB stacked: [B, Stack, H, W, C] → [B, Stack*C, H, W]
+            x = x.permute(0, 1, 4, 2, 3)
+            x = x.flatten(start_dim=1, end_dim=2)
+        # Grayscale stacked: already [B, Stack, H, W] = [B, C, H, W]
 
-        # 1. Reorder dimensions: Move Channel (RGB) before Height and Width
-        # From [Batch, Stack, H, W, C] -> [Batch, Stack, C, H, W]
-        x = x.permute(0, 1, 4, 2, 3)
-
-        # 2. Flatten Stack and Channels (4 * 3 = 12 channels)
-        # From [Batch, 4, 3, 84, 84] -> [Batch, 12, 84, 84]
-        # This matches what Conv2d expects: (Batch, Channels, Height, Width)
-        x = x.flatten(start_dim=1, end_dim=2)
-
-        # 3. Normalize pixel values (0-255 -> 0-1)
+        # Normalize pixel values (0-255 -> 0-1)
         x = x / 255.0
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))

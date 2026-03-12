@@ -15,6 +15,8 @@ import time
 from datetime import datetime, timedelta
 from torch.utils.tensorboard import SummaryWriter
 
+torch.backends.cudnn.benchmark = True
+
 
 class DQNAgent:
 
@@ -59,6 +61,8 @@ class DQNAgent:
 
         self.optimizer = None
         self.loss_fn = nn.MSELoss()
+        self.scaler = torch.amp.GradScaler("cuda", enabled=(device.type == "cuda"))
+        self._amp_dtype = torch.float16 if device.type == "cuda" else torch.float32
 
         # Path to Run info
         self.LOG_FILE = os.path.join(RUNS_DIR, self.hyperparameter_set, "training.log")
@@ -78,10 +82,10 @@ class DQNAgent:
     def _create_buffer(self):
         return ExperienceReplay(capacity=self.replay_memory_size)
 
-    def _create_network(self, state_dim, action_dim):
+    def _create_network(self, obs_dim, action_dim):
         if self.obs_type == "pixel":
             return Pixel_DQN(
-                state_dim,
+                obs_dim,  # full obs_shape tuple for pixel
                 action_dim,
                 enable_dueling_dqn=self.enable_dueling_dqn,
                 enable_noisy_nets=self.enable_noisy_nets,
@@ -90,7 +94,7 @@ class DQNAgent:
             )
         else:
             return DQN(
-                state_dim,
+                obs_dim,  # scalar state_dim for MLP
                 action_dim,
                 enable_dueling_dqn=self.enable_dueling_dqn,
                 enable_noisy_nets=self.enable_noisy_nets,
@@ -102,7 +106,10 @@ class DQNAgent:
         if is_training and random.random() < epsilon:
             return env.action_space.sample()
         else:
-            with torch.no_grad():
+            with (
+                torch.no_grad(),
+                torch.amp.autocast("cuda", enabled=(device.type == "cuda")),
+            ):
                 state_tensor = torch.tensor(
                     state, dtype=torch.float32, device=device
                 ).unsqueeze(0)
@@ -110,7 +117,10 @@ class DQNAgent:
 
     def _select_actions_batch(self, states, policy_dqn, epsilon, num_envs, action_dim):
         """Select actions for a batch of states (vectorized envs)."""
-        with torch.no_grad():
+        with (
+            torch.no_grad(),
+            torch.amp.autocast("cuda", enabled=(device.type == "cuda")),
+        ):
             state_tensor = torch.tensor(
                 np.array(states), dtype=torch.float32, device=device
             )
@@ -141,11 +151,12 @@ class DQNAgent:
 
         env = make_env(self.env_id, self.obs_type, render)
 
-        state_dim = env.observation_space.shape[0]
+        obs_shape = env.observation_space.shape
+        obs_dim = obs_shape if self.obs_type == "pixel" else obs_shape[0]
         action_dim = env.action_space.n
 
-        policy_dqn = self._create_network(state_dim, action_dim).to(device)
-        target_dqn = self._create_network(state_dim, action_dim).to(device)
+        policy_dqn = self._create_network(obs_dim, action_dim).to(device)
+        target_dqn = self._create_network(obs_dim, action_dim).to(device)
         target_dqn.load_state_dict(policy_dqn.state_dict())
 
         buffer = self._create_buffer()
@@ -273,11 +284,12 @@ class DQNAgent:
 
         # Create vectorized env
         envs = make_vec_env(self.env_id, self.obs_type, self.num_envs)
-        state_dim = envs.single_observation_space.shape[0]
+        obs_shape = envs.single_observation_space.shape
+        obs_dim = obs_shape if self.obs_type == "pixel" else obs_shape[0]
         action_dim = envs.single_action_space.n
 
-        policy_dqn = self._create_network(state_dim, action_dim).to(device)
-        target_dqn = self._create_network(state_dim, action_dim).to(device)
+        policy_dqn = self._create_network(obs_dim, action_dim).to(device)
+        target_dqn = self._create_network(obs_dim, action_dim).to(device)
         target_dqn.load_state_dict(policy_dqn.state_dict())
 
         buffer = self._create_buffer()
@@ -324,7 +336,10 @@ class DQNAgent:
         n_step_buffers = [deque(maxlen=self.n_step) for _ in range(self.num_envs)]
         ep_rewards = np.zeros(self.num_envs)
         ep_steps = np.zeros(self.num_envs, dtype=int)
-        ep_start_times = [time.time()] * self.num_envs
+
+        # Periodic printing
+        last_print_time = time.time()
+        last_print_steps = step_count
 
         states, _ = envs.reset()
 
@@ -362,14 +377,11 @@ class DQNAgent:
                         n_step_buffers[i],
                     )
 
-                # Handle completed episodes
+                # Handle completed episodes (silent — no print per episode)
                 for i in range(self.num_envs):
                     if dones[i]:
                         ep_reward = float(ep_rewards[i])
                         rewards_per_episode.append(ep_reward)
-
-                        ep_elapsed = time.time() - ep_start_times[i]
-                        sps = ep_steps[i] / ep_elapsed if ep_elapsed > 0 else 0.0
                         mean_reward = np.mean(
                             rewards_per_episode[
                                 max(0, len(rewards_per_episode) - 100) :
@@ -385,9 +397,6 @@ class DQNAgent:
                         )
                         writer.add_scalar("training/epsilon", epsilon, episode_count)
                         writer.add_scalar(
-                            "training/steps_per_second", sps, episode_count
-                        )
-                        writer.add_scalar(
                             "training/episode_steps",
                             ep_steps[i],
                             episode_count,
@@ -399,14 +408,6 @@ class DQNAgent:
                             "training/buffer_size",
                             len(buffer),
                             episode_count,
-                        )
-
-                        print(
-                            f"Episode {episode_count} | Reward: {ep_reward:0.1f}"
-                            f" | Mean100: {mean_reward:0.1f}"
-                            f" | Epsilon: {epsilon:0.4f}"
-                            f" | Steps: {ep_steps[i]}"
-                            f" | SPS: {sps:0.1f}"
                         )
 
                         self.save_model(
@@ -425,9 +426,33 @@ class DQNAgent:
 
                         ep_rewards[i] = 0.0
                         ep_steps[i] = 0
-                        ep_start_times[i] = time.time()
                         n_step_buffers[i] = deque(maxlen=self.n_step)
                         episode_count += 1
+
+                # Print summary every ~1 second
+                now = time.time()
+                if now - last_print_time >= 1.0:
+                    elapsed = now - last_print_time
+                    sps = (step_count - last_print_steps) / elapsed
+                    mean_reward = (
+                        np.mean(
+                            rewards_per_episode[
+                                max(0, len(rewards_per_episode) - 100) :
+                            ]
+                        )
+                        if rewards_per_episode
+                        else 0.0
+                    )
+                    writer.add_scalar("training/steps_per_second", sps, step_count)
+                    print(
+                        f"Episode {episode_count} | Reward: {rewards_per_episode[-1] if rewards_per_episode else 0:.1f}"
+                        f" | Mean100: {mean_reward:.1f}"
+                        f" | Epsilon: {epsilon:.4f}"
+                        f" | Steps: {step_count}"
+                        f" | SPS: {sps:.0f}"
+                    )
+                    last_print_time = now
+                    last_print_steps = step_count
 
                 # Optimize
                 if steps_since_train >= self.train_frequency:
@@ -593,42 +618,38 @@ class DQNAgent:
 
     def optimize(self, mini_batch, policy_dqn, target_dqn):
 
-        if len(mini_batch[0]) == 6:
-            states, actions, rewards, next_states, dones, _ = zip(*mini_batch)
-        else:
-            states, actions, rewards, next_states, dones = zip(*mini_batch)
+        states, actions, rewards, next_states, dones, _ = mini_batch
 
-        # Convert CPU numpy -> GPU tensors in a single batch (fast + VRAM-friendly)
-        states = torch.tensor(np.array(states), dtype=torch.float32, device=device)
-        actions = torch.tensor(actions, dtype=torch.int64, device=device)
-        new_states = torch.tensor(
-            np.array(next_states), dtype=torch.float32, device=device
-        )
-        rewards = torch.tensor(rewards, dtype=torch.float32, device=device)
-        dones = torch.tensor(dones, dtype=torch.float32, device=device)
+        # numpy arrays → GPU tensors (uint8 obs converted to float32 on GPU)
+        states = torch.as_tensor(states).to(device, dtype=torch.float32)
+        actions = torch.as_tensor(actions).to(device, dtype=torch.int64)
+        new_states = torch.as_tensor(next_states).to(device, dtype=torch.float32)
+        rewards = torch.as_tensor(rewards).to(device, dtype=torch.float32)
+        dones = torch.as_tensor(dones).to(device, dtype=torch.float32)
 
-        with torch.no_grad():
-            if self.enable_double_dqn:
-                # Double DQN: action selection from policy_dqn, value from target_dqn
-                next_actions = policy_dqn(new_states).argmax(dim=1, keepdim=True)
-                target_q = (
-                    rewards
-                    + (1 - dones)
-                    * self.discount_factor_g
-                    * target_dqn(new_states).gather(1, next_actions).squeeze()
-                )
-            else:
-                target_q = (
-                    rewards
-                    + (1 - dones)
-                    * self.discount_factor_g
-                    * target_dqn(new_states).max(dim=1)[0]
-                )
+        with torch.amp.autocast("cuda", enabled=(device.type == "cuda")):
+            with torch.no_grad():
+                if self.enable_double_dqn:
+                    next_actions = policy_dqn(new_states).argmax(dim=1, keepdim=True)
+                    target_q = (
+                        rewards
+                        + (1 - dones)
+                        * self.discount_factor_g
+                        * target_dqn(new_states).gather(1, next_actions).squeeze()
+                    )
+                else:
+                    target_q = (
+                        rewards
+                        + (1 - dones)
+                        * self.discount_factor_g
+                        * target_dqn(new_states).max(dim=1)[0]
+                    )
 
-        current_q = policy_dqn(states).gather(1, actions.unsqueeze(1)).squeeze()
-        loss = self.loss_fn(current_q, target_q)
+            current_q = policy_dqn(states).gather(1, actions.unsqueeze(1)).squeeze()
+            loss = self.loss_fn(current_q, target_q.float())
 
         # Optimize the model
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+        self.optimizer.zero_grad(set_to_none=True)
+        self.scaler.scale(loss).backward()
+        self.scaler.step(self.optimizer)
+        self.scaler.update()

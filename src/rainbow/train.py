@@ -77,7 +77,10 @@ class RainbowAgent(DQNAgent):
         if is_training and (not self.enable_noisy_nets) and random.random() < epsilon:
             return env.action_space.sample()
         else:
-            with torch.no_grad():
+            with (
+                torch.no_grad(),
+                torch.amp.autocast("cuda", enabled=(device.type == "cuda")),
+            ):
                 if is_training and self.enable_noisy_nets:
                     self._reset_noisy_layers(policy_dqn)
                 state_tensor = torch.tensor(
@@ -94,7 +97,10 @@ class RainbowAgent(DQNAgent):
 
     def _select_actions_batch(self, states, policy_dqn, epsilon, num_envs, action_dim):
         """Batched action selection with NoisyNets + distributional support."""
-        with torch.no_grad():
+        with (
+            torch.no_grad(),
+            torch.amp.autocast("cuda", enabled=(device.type == "cuda")),
+        ):
             if self.enable_noisy_nets:
                 self._reset_noisy_layers(policy_dqn)
             state_tensor = torch.tensor(
@@ -192,124 +198,123 @@ class RainbowAgent(DQNAgent):
             self._reset_noisy_layers(policy_dqn)
             self._reset_noisy_layers(target_dqn)
 
-        if len(mini_batch[0]) == 6:
-            states, actions, rewards, next_states, dones, n_steps = zip(*mini_batch)
-        else:
-            states, actions, rewards, next_states, dones = zip(*mini_batch)
-            n_steps = [1 for _ in range(len(rewards))]
+        states, actions, rewards, next_states, dones, n_steps = mini_batch
 
-        # Convert CPU numpy -> GPU tensors in a single batch (fast + VRAM-friendly)
-        states = torch.tensor(np.array(states), dtype=torch.float32, device=device)
-        actions = torch.tensor(actions, dtype=torch.int64, device=device)
-        new_states = torch.tensor(
-            np.array(next_states), dtype=torch.float32, device=device
-        )
-        rewards = torch.tensor(rewards, dtype=torch.float32, device=device)
-        dones = torch.tensor(dones, dtype=torch.float32, device=device)
-        n_steps_t = torch.tensor(n_steps, dtype=torch.int64, device=device)
+        # numpy arrays → GPU tensors
+        states = torch.as_tensor(states).to(device, dtype=torch.float32)
+        actions = torch.as_tensor(actions).to(device, dtype=torch.int64)
+        new_states = torch.as_tensor(next_states).to(device, dtype=torch.float32)
+        rewards = torch.as_tensor(rewards).to(device, dtype=torch.float32)
+        dones = torch.as_tensor(dones).to(device, dtype=torch.float32)
+        n_steps_t = torch.as_tensor(n_steps).to(device, dtype=torch.int64)
         gamma_ns = torch.pow(
             torch.tensor(self.discount_factor_g, dtype=torch.float32, device=device),
             n_steps_t,
         )
 
-        if self.enable_distributional:
-            # C51 categorical distributional RL loss.
-            # policy_dqn(states): [B, A, atoms] logits
-            logits = policy_dqn(states)
-            log_probs = F.log_softmax(logits, dim=-1)
+        with torch.amp.autocast("cuda", enabled=(device.type == "cuda")):
+            if self.enable_distributional:
+                # C51 categorical distributional RL loss.
+                # policy_dqn(states): [B, A, atoms] logits
+                logits = policy_dqn(states)
+                log_probs = F.log_softmax(logits, dim=-1)
 
-            # Select action-specific distributions
-            actions_idx = actions.view(-1, 1, 1).expand(-1, 1, self.num_atoms)
-            log_probs_a = log_probs.gather(1, actions_idx).squeeze(1)  # [B, atoms]
+                # Select action-specific distributions
+                actions_idx = actions.view(-1, 1, 1).expand(-1, 1, self.num_atoms)
+                log_probs_a = log_probs.gather(1, actions_idx).squeeze(1)  # [B, atoms]
 
-            with torch.no_grad():
-                # Next action selection (Double DQN uses policy net for argmax)
-                if self.enable_double_dqn:
-                    next_logits_policy = policy_dqn(new_states)
-                    next_probs_policy = F.softmax(next_logits_policy, dim=-1)
-                    next_q_policy = (next_probs_policy * self.support).sum(dim=-1)
-                    next_actions = next_q_policy.argmax(dim=1)
-                else:
-                    next_logits_target = target_dqn(new_states)
-                    next_probs_target = F.softmax(next_logits_target, dim=-1)
-                    next_q_target = (next_probs_target * self.support).sum(dim=-1)
-                    next_actions = next_q_target.argmax(dim=1)
+                with torch.no_grad():
+                    # Next action selection (Double DQN uses policy net for argmax)
+                    if self.enable_double_dqn:
+                        next_logits_policy = policy_dqn(new_states)
+                        next_probs_policy = F.softmax(next_logits_policy, dim=-1)
+                        next_q_policy = (next_probs_policy * self.support).sum(dim=-1)
+                        next_actions = next_q_policy.argmax(dim=1)
+                    else:
+                        next_logits_target = target_dqn(new_states)
+                        next_probs_target = F.softmax(next_logits_target, dim=-1)
+                        next_q_target = (next_probs_target * self.support).sum(dim=-1)
+                        next_actions = next_q_target.argmax(dim=1)
 
-                next_logits = target_dqn(new_states)
-                next_probs = F.softmax(next_logits, dim=-1)
-                next_actions_idx = next_actions.view(-1, 1, 1).expand(
-                    -1, 1, self.num_atoms
-                )
-                next_dist = next_probs.gather(1, next_actions_idx).squeeze(
-                    1
-                )  # [B, atoms]
-
-                # ── Distributional Bellman projection ──
-                t_z = rewards.unsqueeze(1) + (1 - dones).unsqueeze(
-                    1
-                ) * gamma_ns.unsqueeze(1) * self.support.unsqueeze(0)
-                t_z = t_z.clamp(self.v_min, self.v_max)
-                b = (t_z - self.v_min) / self.delta_z
-                l = b.floor().long()
-                u = b.ceil().long()
-
-                m = torch.zeros_like(next_dist)
-                batch_size = rewards.shape[0]
-                offset = (
-                    torch.arange(batch_size, device=device).unsqueeze(1)
-                    * self.num_atoms
-                )
-
-                l_idx = (l + offset).view(-1)
-                u_idx = (u + offset).view(-1)
-                m_flat = m.view(-1)
-                m_flat.index_add_(
-                    0,
-                    l_idx,
-                    (next_dist * (u.float() - b)).view(-1),
-                )
-                m_flat.index_add_(
-                    0,
-                    u_idx,
-                    (next_dist * (b - l.float())).view(-1),
-                )
-
-            per_sample_loss = -(m * log_probs_a).sum(dim=1)  # cross-entropy
-            if weights is not None:
-                w = torch.tensor(weights, dtype=torch.float32, device=device)
-                loss = (w * per_sample_loss).mean()
-            else:
-                loss = per_sample_loss.mean()
-
-            # For PER: priorities from per-sample distributional loss
-            td_errors = per_sample_loss.detach()
-
-        else:
-            with torch.no_grad():
-                if self.enable_double_dqn:
-                    # Double DQN: action selection from policy_dqn, value from target_dqn
-                    next_actions = policy_dqn(new_states).argmax(dim=1, keepdim=True)
-                    target_q = (
-                        rewards
-                        + (1 - dones)
-                        * gamma_ns
-                        * target_dqn(new_states).gather(1, next_actions).squeeze()
+                    next_logits = target_dqn(new_states)
+                    next_probs = F.softmax(next_logits, dim=-1)
+                    next_actions_idx = next_actions.view(-1, 1, 1).expand(
+                        -1, 1, self.num_atoms
                     )
-                else:
-                    target_q = (
-                        rewards
-                        + (1 - dones) * gamma_ns * target_dqn(new_states).max(dim=1)[0]
+                    next_dist = next_probs.gather(1, next_actions_idx).squeeze(
+                        1
+                    )  # [B, atoms]
+
+                    # ── Distributional Bellman projection ──
+                    t_z = rewards.unsqueeze(1) + (1 - dones).unsqueeze(
+                        1
+                    ) * gamma_ns.unsqueeze(1) * self.support.unsqueeze(0)
+                    t_z = t_z.clamp(self.v_min, self.v_max)
+                    b = (t_z - self.v_min) / self.delta_z
+                    l = b.floor().long()
+                    u = b.ceil().long()
+
+                    m = torch.zeros_like(next_dist)
+                    batch_size = rewards.shape[0]
+                    offset = (
+                        torch.arange(batch_size, device=device).unsqueeze(1)
+                        * self.num_atoms
                     )
 
-            current_q = policy_dqn(states).gather(1, actions.unsqueeze(1)).squeeze()
-            td_errors = current_q - target_q
+                    l_idx = (l + offset).view(-1)
+                    u_idx = (u + offset).view(-1)
+                    m_flat = m.view(-1)
+                    m_flat.index_add_(
+                        0,
+                        l_idx,
+                        (next_dist * (u.float() - b)).view(-1),
+                    )
+                    m_flat.index_add_(
+                        0,
+                        u_idx,
+                        (next_dist * (b - l.float())).view(-1),
+                    )
 
-            if weights is not None:
-                w = torch.tensor(weights, dtype=torch.float32, device=device)
-                per_sample_loss = td_errors.pow(2)
-                loss = (w * per_sample_loss).mean()
+                per_sample_loss = -(m * log_probs_a).sum(dim=1)  # cross-entropy
+                if weights is not None:
+                    w = torch.as_tensor(weights).to(device, dtype=torch.float32)
+                    loss = (w * per_sample_loss).mean()
+                else:
+                    loss = per_sample_loss.mean()
+
+                # For PER: priorities from per-sample distributional loss
+                td_errors = per_sample_loss.detach()
+
             else:
-                loss = self.loss_fn(current_q, target_q)
+                with torch.no_grad():
+                    if self.enable_double_dqn:
+                        # Double DQN: action selection from policy_dqn, value from target_dqn
+                        next_actions = policy_dqn(new_states).argmax(
+                            dim=1, keepdim=True
+                        )
+                        target_q = (
+                            rewards
+                            + (1 - dones)
+                            * gamma_ns
+                            * target_dqn(new_states).gather(1, next_actions).squeeze()
+                        )
+                    else:
+                        target_q = (
+                            rewards
+                            + (1 - dones)
+                            * gamma_ns
+                            * target_dqn(new_states).max(dim=1)[0]
+                        )
+
+                current_q = policy_dqn(states).gather(1, actions.unsqueeze(1)).squeeze()
+                td_errors = current_q - target_q
+
+                if weights is not None:
+                    w = torch.as_tensor(weights).to(device, dtype=torch.float32)
+                    per_sample_loss = td_errors.pow(2)
+                    loss = (w * per_sample_loss).mean()
+                else:
+                    loss = self.loss_fn(current_q, target_q.float())
 
         # Update PER priorities from absolute TD error
         if (
@@ -328,6 +333,7 @@ class RainbowAgent(DQNAgent):
                 )
 
         # Optimize the model
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+        self.optimizer.zero_grad(set_to_none=True)
+        self.scaler.scale(loss).backward()
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
