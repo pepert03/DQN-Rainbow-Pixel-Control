@@ -186,3 +186,15 @@ def make_env(env_id, obs_type, render=False, seed=42):
         return make_state_env(env_id, render, seed)
     else:
         raise ValueError(f"Unsupported obs_type: {obs_type}")
+
+
+def make_vec_env(env_id, obs_type, num_envs, seed=42):
+    """Create a SyncVectorEnv with num_envs parallel environments."""
+
+    def _make_thunk(idx):
+        def _thunk():
+            return make_env(env_id, obs_type, render=False, seed=seed + idx)
+
+        return _thunk
+
+    return gym.vector.SyncVectorEnv([_make_thunk(i) for i in range(num_envs)])

@@ -92,6 +92,28 @@ class RainbowAgent(DQNAgent):
                 else:
                     return q_out.squeeze().argmax().item()
 
+    def _select_actions_batch(self, states, policy_dqn, epsilon, num_envs, action_dim):
+        """Batched action selection with NoisyNets + distributional support."""
+        with torch.no_grad():
+            if self.enable_noisy_nets:
+                self._reset_noisy_layers(policy_dqn)
+            state_tensor = torch.tensor(
+                np.array(states), dtype=torch.float32, device=device
+            )
+            q_out = policy_dqn(state_tensor)
+            if self.enable_distributional:
+                probs = F.softmax(q_out, dim=-1)
+                q_values = (probs * self.support).sum(dim=-1)
+                greedy_actions = q_values.argmax(dim=-1).cpu().numpy()
+            else:
+                greedy_actions = q_out.argmax(dim=-1).cpu().numpy()
+
+        if not self.enable_noisy_nets:
+            explore = np.random.random(num_envs) < epsilon
+            random_actions = np.random.randint(0, action_dim, size=num_envs)
+            return np.where(explore, random_actions, greedy_actions)
+        return greedy_actions
+
     def _n_step_transition(self, n_step_buffer: deque):
         """Build one n-step transition from the current buffer."""
         reward_n = 0.0

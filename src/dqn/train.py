@@ -4,7 +4,7 @@ from torch import nn
 import torch.nn.functional as F
 from src.networks import Pixel_DQN, DQN
 from src.buffer import ExperienceReplay
-from src.wrappers import make_env
+from src.wrappers import make_env, make_vec_env
 from src.config import load_config, device, RUNS_DIR, DATE_FORMAT
 from src.utils import save_graph
 import itertools
@@ -43,6 +43,7 @@ class DQNAgent:
         self.learning_rate = config["learning_rate"]
         self.discount_factor_g = config["discount_factor_g"]
         self.train_frequency = int(config.get("train_frequency", 4))
+        self.num_envs = int(config.get("num_envs", 1))
 
         # DQN extensions (can be enabled independently)
         self.enable_double_dqn = config.get("enable_double_dqn", False)
@@ -106,6 +107,19 @@ class DQNAgent:
                     state, dtype=torch.float32, device=device
                 ).unsqueeze(0)
                 return policy_dqn(state_tensor).squeeze().argmax().item()
+
+    def _select_actions_batch(self, states, policy_dqn, epsilon, num_envs, action_dim):
+        """Select actions for a batch of states (vectorized envs)."""
+        with torch.no_grad():
+            state_tensor = torch.tensor(
+                np.array(states), dtype=torch.float32, device=device
+            )
+            q_values = policy_dqn(state_tensor)
+            greedy_actions = q_values.argmax(dim=-1).cpu().numpy()
+
+        explore = np.random.random(num_envs) < epsilon
+        random_actions = np.random.randint(0, action_dim, size=num_envs)
+        return np.where(explore, random_actions, greedy_actions)
 
     def _store_transition(
         self, buffer, state, action, reward, next_state, done_flag, n_step_buffer
@@ -241,6 +255,204 @@ class DQNAgent:
                 file.write(log_message + "\n")
 
     def run(self, is_training=True, render=False):
+        if is_training and self.num_envs > 1:
+            return self._run_vectorized()
+        return self._run_single(is_training, render)
+
+    def _run_vectorized(self):
+        """Training loop with vectorized (parallel) environments."""
+        start_time = datetime.now()
+        last_graph_update_time = start_time
+
+        log_message = f"{start_time.strftime(DATE_FORMAT)}: Training starting ({self.num_envs} envs)..."
+        print(log_message)
+        with open(self.LOG_FILE, "w") as file:
+            file.write(log_message + "\n")
+
+        writer = SummaryWriter(log_dir=self.TB_DIR)
+
+        # Create vectorized env
+        envs = make_vec_env(self.env_id, self.obs_type, self.num_envs)
+        state_dim = envs.single_observation_space.shape[0]
+        action_dim = envs.single_action_space.n
+
+        policy_dqn = self._create_network(state_dim, action_dim).to(device)
+        target_dqn = self._create_network(state_dim, action_dim).to(device)
+        target_dqn.load_state_dict(policy_dqn.state_dict())
+
+        buffer = self._create_buffer()
+        epsilon = self.epsilon_init
+        self.optimizer = torch.optim.Adam(
+            policy_dqn.parameters(), lr=self.learning_rate
+        )
+
+        rewards_per_episode: list[float] = []
+        epsilon_history: list[float] = []
+        best_reward = float("-inf")
+        episode_count = 0
+        step_count = 0
+        steps_since_train = 0
+        steps_since_sync = 0
+
+        # Resume from checkpoint
+        checkpoint_file = os.path.join(
+            RUNS_DIR, self.hyperparameter_set, "checkpoint.pt"
+        )
+        if os.path.exists(checkpoint_file):
+            checkpoint = torch.load(
+                checkpoint_file, map_location=device, weights_only=False
+            )
+            policy_dqn.load_state_dict(checkpoint["model_state_dict"])
+            if "target_model_state_dict" in checkpoint:
+                target_dqn.load_state_dict(checkpoint["target_model_state_dict"])
+            else:
+                target_dqn.load_state_dict(policy_dqn.state_dict())
+            self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            epsilon = float(checkpoint.get("epsilon", epsilon))
+            step_count = int(checkpoint.get("step_count", 0))
+            episode_count = int(checkpoint.get("episode", 0)) + 1
+            best_reward = float(checkpoint.get("best_reward", best_reward))
+            rewards_per_episode = list(checkpoint.get("rewards_per_episode", []))
+            epsilon_history = list(checkpoint.get("epsilon_history", []))
+            print(
+                f"Resumed from episode {episode_count - 1} | epsilon={epsilon:0.4f} | steps={step_count}"
+            )
+        else:
+            print("Starting training from scratch.")
+
+        # Per-env tracking
+        n_step_buffers = [deque(maxlen=self.n_step) for _ in range(self.num_envs)]
+        ep_rewards = np.zeros(self.num_envs)
+        ep_steps = np.zeros(self.num_envs, dtype=int)
+        ep_start_times = [time.time()] * self.num_envs
+
+        states, _ = envs.reset()
+
+        try:
+            while True:
+                actions = self._select_actions_batch(
+                    states, policy_dqn, epsilon, self.num_envs, action_dim
+                )
+                next_states, rewards, terminateds, truncateds, infos = envs.step(
+                    actions
+                )
+                dones = np.logical_or(terminateds, truncateds)
+
+                ep_rewards += rewards
+                ep_steps += 1
+                step_count += self.num_envs
+                steps_since_train += self.num_envs
+                steps_since_sync += self.num_envs
+
+                # Store transitions per env
+                final_obs = infos.get("final_observation", [None] * self.num_envs)
+                for i in range(self.num_envs):
+                    next_s = (
+                        final_obs[i]
+                        if dones[i] and final_obs[i] is not None
+                        else next_states[i]
+                    )
+                    self._store_transition(
+                        buffer,
+                        states[i],
+                        int(actions[i]),
+                        float(rewards[i]),
+                        next_s,
+                        bool(dones[i]),
+                        n_step_buffers[i],
+                    )
+
+                # Handle completed episodes
+                for i in range(self.num_envs):
+                    if dones[i]:
+                        ep_reward = float(ep_rewards[i])
+                        rewards_per_episode.append(ep_reward)
+
+                        ep_elapsed = time.time() - ep_start_times[i]
+                        sps = ep_steps[i] / ep_elapsed if ep_elapsed > 0 else 0.0
+                        mean_reward = np.mean(
+                            rewards_per_episode[
+                                max(0, len(rewards_per_episode) - 100) :
+                            ]
+                        )
+
+                        writer.add_scalar("reward/episode", ep_reward, episode_count)
+                        writer.add_scalar("reward/mean_100", mean_reward, episode_count)
+                        writer.add_scalar(
+                            "reward/best",
+                            max(best_reward, ep_reward),
+                            episode_count,
+                        )
+                        writer.add_scalar("training/epsilon", epsilon, episode_count)
+                        writer.add_scalar(
+                            "training/steps_per_second", sps, episode_count
+                        )
+                        writer.add_scalar(
+                            "training/episode_steps",
+                            ep_steps[i],
+                            episode_count,
+                        )
+                        writer.add_scalar(
+                            "training/total_steps", step_count, episode_count
+                        )
+                        writer.add_scalar(
+                            "training/buffer_size",
+                            len(buffer),
+                            episode_count,
+                        )
+
+                        print(
+                            f"Episode {episode_count} | Reward: {ep_reward:0.1f}"
+                            f" | Mean100: {mean_reward:0.1f}"
+                            f" | Epsilon: {epsilon:0.4f}"
+                            f" | Steps: {ep_steps[i]}"
+                            f" | SPS: {sps:0.1f}"
+                        )
+
+                        self.save_model(
+                            policy_dqn,
+                            target_dqn,
+                            ep_reward,
+                            episode_count,
+                            best_reward,
+                            rewards_per_episode,
+                            epsilon_history,
+                            epsilon,
+                            step_count,
+                        )
+                        if ep_reward > best_reward:
+                            best_reward = ep_reward
+
+                        ep_rewards[i] = 0.0
+                        ep_steps[i] = 0
+                        ep_start_times[i] = time.time()
+                        n_step_buffers[i] = deque(maxlen=self.n_step)
+                        episode_count += 1
+
+                # Optimize
+                if steps_since_train >= self.train_frequency:
+                    if self._sample_and_optimize(buffer, policy_dqn, target_dqn):
+                        epsilon = max(epsilon * self.epsilon_decay, self.epsilon_min)
+                        epsilon_history.append(epsilon)
+                    steps_since_train = 0
+
+                # Sync target network
+                if steps_since_sync >= self.network_sync_rate:
+                    target_dqn.load_state_dict(policy_dqn.state_dict())
+                    steps_since_sync = 0
+
+                # Update graph periodically
+                current_time = datetime.now()
+                if current_time - last_graph_update_time > timedelta(seconds=10):
+                    save_graph(self.GRAPH_FILE, rewards_per_episode, epsilon_history)
+                    last_graph_update_time = current_time
+
+                states = next_states
+        finally:
+            writer.close()
+            envs.close()
+
+    def _run_single(self, is_training=True, render=False):
         writer = None
         if is_training:
             start_time = datetime.now()
@@ -375,6 +587,9 @@ class DQNAgent:
         if writer is not None:
             writer.close()
         env.close()
+
+    # Alias for backward compatibility
+    _run = _run_single
 
     def optimize(self, mini_batch, policy_dqn, target_dqn):
 
