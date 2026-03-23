@@ -89,29 +89,105 @@ class RenderGrayscaleWrapper(gym.ObservationWrapper):
         )
 
     def observation(self, obs):
-        frame = self.env.render()  # already at target resolution
-        return cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        frame = self.env.render()
+        gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        if gray.shape != (self._obs_size, self._obs_size):
+            gray = cv2.resize(
+                gray, (self._obs_size, self._obs_size), interpolation=cv2.INTER_AREA
+            )
+        return gray
 
 
-class OpenCVRenderWrapper(gym.Wrapper):
-    """Muestra el renderizado en una ventana flotante usando OpenCV."""
+class EvalRenderWrapper(gym.Wrapper):
+    """High-quality display for eval using a separate MuJoCo renderer at native
+    resolution, independent of the 84x84 model observation pipeline.
+    Falls back to upscaled env.render() for non-MuJoCo envs."""
 
-    def __init__(self, env, window_name="MuJoCo Preview"):
+    def __init__(self, env, display_size=480, window_name="Eval"):
         super().__init__(env)
-        self.window_name = window_name
+        self._display_size = display_size
+        self._window_name = window_name
+        self._mj_renderer = None
+        self._camera = None
+        self._is_mujoco = hasattr(env.unwrapped, "model") and hasattr(
+            env.unwrapped, "data"
+        )
+
+    def _init_mj_renderer(self):
+        if self._mj_renderer is not None:
+            return
+        import mujoco
+
+        unwrapped = self.env.unwrapped
+        # Ensure the model's offscreen framebuffer is large enough
+        unwrapped.model.vis.global_.offwidth = max(
+            unwrapped.model.vis.global_.offwidth, self._display_size
+        )
+        unwrapped.model.vis.global_.offheight = max(
+            unwrapped.model.vis.global_.offheight, self._display_size
+        )
+        self._mj_renderer = mujoco.Renderer(
+            unwrapped.model,
+            height=self._display_size,
+            width=self._display_size,
+        )
+        # Copy the exact camera from the env's own viewer (already configured
+        # with default_cam_config + correct type). This guarantees the eval
+        # display matches the same viewpoint the model was trained on.
+        viewer = getattr(unwrapped.mujoco_renderer, "viewer", None)
+        if viewer is not None and hasattr(viewer, "cam"):
+            src = viewer.cam
+            self._camera = mujoco.MjvCamera()
+            self._camera.type = src.type
+            self._camera.fixedcamid = src.fixedcamid
+            self._camera.trackbodyid = src.trackbodyid
+            self._camera.distance = src.distance
+            self._camera.azimuth = src.azimuth
+            self._camera.elevation = src.elevation
+            self._camera.lookat[:] = src.lookat
+        else:
+            self._camera = -1  # free camera fallback
+
+    def _get_display_frame(self):
+        if self._is_mujoco:
+            self._init_mj_renderer()
+            self._mj_renderer.update_scene(
+                self.env.unwrapped.data, camera=self._camera
+            )
+            return self._mj_renderer.render()
+        # Fallback: upscale the low-res env render
+        frame = self.env.render()
+        if frame is not None:
+            h, w = frame.shape[:2]
+            if h != self._display_size or w != self._display_size:
+                frame = cv2.resize(
+                    frame,
+                    (self._display_size, self._display_size),
+                    interpolation=cv2.INTER_LINEAR,
+                )
+        return frame
+
+    def _show(self, frame):
+        if frame is None:
+            return
+        img_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        cv2.imshow(self._window_name, img_bgr)
+        cv2.waitKey(1)
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
-        img = self.env.render()
-        if img is not None:
-            # Convertir RGB a BGR para OpenCV y redimensionar para ver mejor
-            img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-            img_bgr = cv2.resize(img_bgr, (480, 480), interpolation=cv2.INTER_NEAREST)
-            cv2.imshow(self.window_name, img_bgr)
-            cv2.waitKey(1)
+        self._show(self._get_display_frame())
         return obs, reward, terminated, truncated, info
 
+    def reset(self, **kwargs):
+        result = self.env.reset(**kwargs)
+        self._show(self._get_display_frame())
+        return result
+
     def close(self):
+        if self._mj_renderer is not None:
+            self._mj_renderer.close()
+            self._mj_renderer = None
         cv2.destroyAllWindows()
         return self.env.close()
 
@@ -173,7 +249,9 @@ def make_state_env(env_id, render=False, seed=42):
 def make_pixel_env(env_id, render=False, seed=42):
     """
     Creates env with Pixel observation + Discretization + Stack.
-    Renders directly at 84x84 to avoid expensive high-res render + resize.
+    Renders directly at 84x84 to avoid expensive high-res render + resize,
+    and to keep the observation distribution identical between train and eval.
+    The display wrapper (OpenCVRenderWrapper) upscales with smooth interpolation.
     """
     obs_size = 84
 
@@ -203,8 +281,7 @@ def make_pixel_env(env_id, render=False, seed=42):
     env = FrameStackObservation(env, stack_size=4)
 
     if render:
-        # env = HumanRendering(env)
-        env = OpenCVRenderWrapper(env)
+        env = EvalRenderWrapper(env)
 
     env.action_space.seed(seed)
     env.observation_space.seed(seed)
