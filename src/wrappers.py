@@ -297,20 +297,3 @@ def make_env(env_id, obs_type, render=False, seed=42):
         raise ValueError(f"Unsupported obs_type: {obs_type}")
 
 
-def make_vec_env(env_id, obs_type, num_envs, seed=42):
-    """Create a vectorized environment with num_envs parallel environments.
-    Uses AsyncVectorEnv for pixel obs (parallel rendering in subprocesses)
-    and SyncVectorEnv for state obs."""
-
-    def _make_thunk(idx):
-        def _thunk():
-            return make_env(env_id, obs_type, render=False, seed=seed + idx)
-
-        return _thunk
-
-    thunks = [_make_thunk(i) for i in range(num_envs)]
-    if obs_type == "pixel":
-        # SyncVectorEnv for pixel: avoids per-subprocess OpenGL context
-        # limits (MuJoCo framebuffer crash on Windows with many envs).
-        return gym.vector.SyncVectorEnv(thunks)
-    return gym.vector.SyncVectorEnv(thunks)
