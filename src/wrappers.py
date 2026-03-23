@@ -146,14 +146,18 @@ class WalkerReward(gym.Wrapper):
 
 def make_state_env(env_id, render=False, seed=42):
 
-    if "Walker2d-v5" in env_id:
+    if "Walker2d-v5" in env_id or "Hopper-v5" in env_id:
         env = gym.make(
             env_id,
             render_mode="human" if render else None,
-            healthy_angle_range=(-0.4, 0.4),
-            max_episode_steps=2500,
+            max_episode_steps=20000,
+            # forward
+            forward_reward_weight=0.5,
+            # control
+            ctrl_cost_weight=0.1,
+            # healthy
+            healthy_reward=1.25,
         )
-        env = WalkerReward(env)
     else:
         env = gym.make(env_id, render_mode="human" if render else None)
 
@@ -173,16 +177,17 @@ def make_pixel_env(env_id, render=False, seed=42):
     """
     obs_size = 84
 
-    if "Walker2d-v5" in env_id:
+    if "Walker2d-v5" in env_id or "Hopper-v5" in env_id:
         env = gym.make(
             env_id,
             render_mode="rgb_array",
             width=obs_size,
             height=obs_size,
-            healthy_angle_range=(-0.4, 0.4),
-            max_episode_steps=2500,
+            max_episode_steps=20000,
+            forward_reward_weight=0.5,
+            ctrl_cost_weight=0.1,
+            healthy_reward=1.25,
         )
-        env = WalkerReward(env)
     else:
         env = gym.make(env_id, render_mode="rgb_array", width=obs_size, height=obs_size)
 

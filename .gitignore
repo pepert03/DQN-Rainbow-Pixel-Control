@@ -34,3 +34,7 @@ venv/
 .vscode/
 .idea/
 .DS_Store
+
+# --- TensorBoard logs ---
+**/tensorboard/
+**/checkpoint.pt

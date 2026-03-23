@@ -9,7 +9,55 @@ pixel_walker2d:
   network_sync_rate: 2000
   learning_rate: 0.0001
   discount_factor_g: 0.99
-  num_envs: 8
+  num_envs: 1
+  train_frequency: 4
+
+states_hopper:
+  env_id: Hopper-v5
+  obs: state # options: pixel, state
+  replay_memory_size: 200000
+  mini_batch_size: 64
+  epsilon_init: 1.0
+  epsilon_decay: 0.999995
+  epsilon_min: 0.01
+  network_sync_rate: 2000
+  learning_rate: 0.0001
+  discount_factor_g: 0.99
+  num_envs: 1
+  train_frequency: 4
+
+rainbow_pixel_hopper:
+  env_id: Hopper-v5
+  obs: pixel # options: pixel, state
+  replay_memory_size: 200000
+  mini_batch_size: 64
+  epsilon_init: 1.0
+  epsilon_decay: 0.999995
+  epsilon_min: 0.01
+  network_sync_rate: 2000
+  learning_rate: 0.0001
+  discount_factor_g: 0.99
+  num_envs: 1
+  train_frequency: 4
+  enable_double_dqn: true
+  enable_dueling_dqn: true
+  enable_prioritized_replay: true
+  enable_noisy_nets: true
+  enable_distributional: true
+  enable_n_step: true
+
+pixel_hopper:
+  env_id: Hopper-v5
+  obs: pixel # options: pixel, state
+  replay_memory_size: 200000
+  mini_batch_size: 64
+  epsilon_init: 1.0
+  epsilon_decay: 0.999995
+  epsilon_min: 0.01
+  network_sync_rate: 2000
+  learning_rate: 0.0001
+  discount_factor_g: 0.99
+  num_envs: 1
   train_frequency: 4
 
 rainbow_states_walker2d:
@@ -18,12 +66,12 @@ rainbow_states_walker2d:
   replay_memory_size: 200000
   mini_batch_size: 64
   epsilon_init: 1.0
-  epsilon_decay: 0.99999
+  epsilon_decay: 0.999995
   epsilon_min: 0.01
   network_sync_rate: 2000
   learning_rate: 0.0001
   discount_factor_g: 0.99
-  num_envs: 30
+  num_envs: 1
   train_frequency: 4
   enable_double_dqn: true
   enable_dueling_dqn: true
@@ -43,7 +91,7 @@ rainbow_pixel_walker2d:
   network_sync_rate: 2000
   learning_rate: 0.0001
   discount_factor_g: 0.99
-  num_envs: 30
+  num_envs: 1
   enable_double_dqn: true
   enable_dueling_dqn: true
   enable_prioritized_replay: true
