@@ -2,14 +2,7 @@ import cv2
 import numpy as np
 import gymnasium as gym
 from gymnasium.spaces import Discrete, Box
-
-from gymnasium.wrappers import (
-    AddRenderObservation,
-    ResizeObservation,
-    FrameStackObservation,
-    HumanRendering,
-)
-import itertools
+from gymnasium.wrappers import FrameStackObservation
 
 
 # Discreize continuous actions n into bins, no need to separete into combinations of actions for each dimension, as the agent will just choose one action at a time
@@ -62,18 +55,29 @@ class DiscretizedActionWrapper(gym.ActionWrapper):
         return self.actions_grid[action_index]
 
 
-class GrayscaleWrapper(gym.ObservationWrapper):
-    """Convert RGB observations to grayscale using cv2 (faster than numpy)."""
+class FrozenJointsWrapper(gym.ActionWrapper):
+    """Zero-out specified actuator indices and expose only the remaining ones.
+    The agent sees a smaller Box action space (only the free joints)."""
 
-    def __init__(self, env):
+    def __init__(self, env, frozen_indices):
         super().__init__(env)
-        obs_shape = self.observation_space.shape  # (H, W, 3)
-        self.observation_space = Box(
-            low=0, high=255, shape=(obs_shape[0], obs_shape[1]), dtype=np.uint8
+        n_actuators = env.action_space.shape[0]
+        self.frozen = np.array(sorted(frozen_indices), dtype=int)
+        self.free = np.array(
+            [i for i in range(n_actuators) if i not in self.frozen], dtype=int
+        )
+        low = env.action_space.low[self.free]
+        high = env.action_space.high[self.free]
+        self.action_space = Box(low=low, high=high, dtype=env.action_space.dtype)
+        print(
+            f"FrozenJointsWrapper: {len(self.frozen)} frozen, "
+            f"{len(self.free)} free actuators"
         )
 
-    def observation(self, obs):
-        return cv2.cvtColor(obs, cv2.COLOR_RGB2GRAY)
+    def action(self, action):
+        full = np.zeros(self.env.action_space.shape, dtype=self.env.action_space.dtype)
+        full[self.free] = action
+        return full
 
 
 class RenderGrayscaleWrapper(gym.ObservationWrapper):
@@ -200,17 +204,14 @@ class EvalRenderWrapper(gym.Wrapper):
         return self._episode_frames
 
     def save_video(self, path, fps=None):
-        """Save recorded episode frames as MP4 video."""
+        """Save recorded episode frames as H.264 MP4 via imageio-ffmpeg."""
         if not self._episode_frames:
             return
         if fps is None:
             fps = self.metadata.get("render_fps", 30)
-        h, w = self._episode_frames[0].shape[:2]
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        writer = cv2.VideoWriter(path, fourcc, fps, (w, h))
-        for frame in self._episode_frames:
-            writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-        writer.release()
+        import imageio.v3 as iio
+
+        iio.imwrite(path, self._episode_frames, fps=fps, codec="libx264")
 
     def close(self):
         if self._mj_renderer is not None:
@@ -220,35 +221,7 @@ class EvalRenderWrapper(gym.Wrapper):
         return self.env.close()
 
 
-class WalkerReward(gym.Wrapper):
-    def __init__(self, env, torso_weight=1.0, knee_weight=0.3, symmetry_weight=0.1):
-        super().__init__(env)
-        self.torso_weight = torso_weight
-        self.knee_weight = knee_weight
-        self.symmetry_weight = symmetry_weight
-
-    def step(self, action):
-        obs, reward, terminated, truncated, info = self.env.step(action)
-
-        torso_angle = obs[1]
-        left_knee = obs[3]
-        right_knee = obs[6]
-        left_hip = obs[2]
-        right_hip = obs[5]
-
-        torso_penalty = self.torso_weight * torso_angle**2
-        knee_penalty = self.knee_weight * (left_knee**2 + right_knee**2)
-        symmetry_penalty = self.symmetry_weight * (
-            (left_knee - right_knee) ** 2 + (left_hip - right_hip) ** 2
-        )
-
-        # Shaped reward
-        shaped_reward = reward - torso_penalty - knee_penalty - symmetry_penalty
-
-        return obs, shaped_reward, terminated, truncated, info
-
-
-def make_state_env(env_id, render=False, seed=42):
+def make_state_env(env_id, render=False, seed=42, frozen_joints=None):
 
     render_mode = "rgb_array" if render else None
 
@@ -264,6 +237,9 @@ def make_state_env(env_id, render=False, seed=42):
     else:
         env = gym.make(env_id, render_mode=render_mode)
 
+    if frozen_joints:
+        env = FrozenJointsWrapper(env, frozen_joints)
+
     # Discretize actions if needed
     if isinstance(env.action_space, Box):
         env = DiscretizedActionWrapper(env, bins=3)
@@ -276,7 +252,7 @@ def make_state_env(env_id, render=False, seed=42):
     return env
 
 
-def make_pixel_env(env_id, render=False, seed=42):
+def make_pixel_env(env_id, render=False, seed=42, frozen_joints=None):
     """
     Creates env with Pixel observation + Discretization + Stack.
     Renders directly at 84x84 to avoid expensive high-res render + resize,
@@ -299,6 +275,9 @@ def make_pixel_env(env_id, render=False, seed=42):
     else:
         env = gym.make(env_id, render_mode="rgb_array", width=obs_size, height=obs_size)
 
+    if frozen_joints:
+        env = FrozenJointsWrapper(env, frozen_joints)
+
     # Single wrapper: render → grayscale (no resize needed, already 84x84)
     env = RenderGrayscaleWrapper(env, obs_size=obs_size)
 
@@ -318,11 +297,11 @@ def make_pixel_env(env_id, render=False, seed=42):
     return env
 
 
-def make_env(env_id, obs_type, render=False, seed=42):
+def make_env(env_id, obs_type, render=False, seed=42, frozen_joints=None):
     if obs_type == "pixel":
-        return make_pixel_env(env_id, render, seed)
+        return make_pixel_env(env_id, render, seed, frozen_joints)
     elif obs_type == "state":
-        return make_state_env(env_id, render, seed)
+        return make_state_env(env_id, render, seed, frozen_joints)
     else:
         raise ValueError(f"Unsupported obs_type: {obs_type}")
 

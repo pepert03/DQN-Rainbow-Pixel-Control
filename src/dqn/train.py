@@ -1,12 +1,10 @@
 from collections import deque
 import torch
 from torch import nn
-import torch.nn.functional as F
 from src.networks import Pixel_DQN, DQN
 from src.buffer import ExperienceReplay
 from src.wrappers import make_env
-from src.config import load_config, device, RUNS_DIR, DATE_FORMAT
-from src.utils import save_graph
+from src.utils import load_config, device, RUNS_DIR, DATE_FORMAT, save_graph
 import itertools
 import random
 import numpy as np
@@ -45,6 +43,7 @@ class DQNAgent:
         self.learning_rate = config["learning_rate"]
         self.discount_factor_g = config["discount_factor_g"]
         self.train_frequency = int(config.get("train_frequency", 4))
+        self.frozen_joints = config.get("frozen_joints", None)
 
         # DQN extensions (can be enabled independently)
         self.enable_double_dqn = config.get("enable_double_dqn", False)
@@ -61,7 +60,6 @@ class DQNAgent:
         self.optimizer = None
         self.loss_fn = nn.MSELoss()
         self.scaler = torch.amp.GradScaler("cuda", enabled=(device.type == "cuda"))
-        self._amp_dtype = torch.float16 if device.type == "cuda" else torch.float32
 
         # Path to Run info
         self.LOG_FILE = os.path.join(RUNS_DIR, self.hyperparameter_set, "training.log")
@@ -132,7 +130,7 @@ class DQNAgent:
 
     def load_model(self, is_training=True, render=False):
 
-        env = make_env(self.env_id, self.obs_type, render)
+        env = make_env(self.env_id, self.obs_type, render, frozen_joints=self.frozen_joints)
 
         obs_shape = env.observation_space.shape
         obs_dim = obs_shape if self.obs_type == "pixel" else obs_shape[0]

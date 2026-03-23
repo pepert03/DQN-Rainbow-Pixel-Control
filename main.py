@@ -1,6 +1,6 @@
 import argparse
 
-from src.config import load_config
+from src.utils import load_config
 
 
 def main():

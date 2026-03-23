@@ -9,10 +9,19 @@ env_id: Humanoid-v5
 epsilon_decay: 0.999995
 epsilon_init: 1.0
 epsilon_min: 0.01
+frozen_joints:
+- 1
+- 4
+- 8
+- 11
+- 12
+- 13
+- 14
+- 15
+- 16
 learning_rate: 0.0001
 mini_batch_size: 64
 network_sync_rate: 2000
-num_envs: 1
 obs: pixel
 replay_memory_size: 200000
 train_frequency: 4

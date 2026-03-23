@@ -7,8 +7,8 @@ import random
 from typing import Any
 
 from src.dqn.train import DQNAgent
-from src.rainbow.buffer import PrioritizedExperienceReplay
-from src.config import device
+from src.buffer import PrioritizedExperienceReplay
+from src.utils import device
 
 
 class RainbowAgent(DQNAgent):
