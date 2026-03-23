@@ -261,6 +261,18 @@ class DQNAgent:
 
             writer = SummaryWriter(log_dir=self.TB_DIR)
 
+        # Best eval video tracking
+        best_eval_reward = float("-inf")
+        if not is_training:
+            eval_dir = os.path.join(RUNS_DIR, self.hyperparameter_set, "eval")
+            os.makedirs(eval_dir, exist_ok=True)
+            reward_file = os.path.join(eval_dir, "best_reward.txt")
+            video_file = os.path.join(eval_dir, "best.mp4")
+            if os.path.exists(reward_file):
+                with open(reward_file, "r") as f:
+                    best_eval_reward = float(f.read().strip())
+                print(f"Previous best eval reward: {best_eval_reward:.1f}")
+
         # Create environment and load model
         (
             env,
@@ -333,6 +345,20 @@ class DQNAgent:
                 state = next_state
 
             rewards_per_episode.append(episode_reward)
+
+            # Save best eval video
+            if not is_training and hasattr(env, "save_video"):
+                print(
+                    f"Episode {episode} | Reward: {episode_reward:.1f} | Best: {best_eval_reward:.1f}"
+                )
+                if episode_reward > best_eval_reward:
+                    best_eval_reward = episode_reward
+                    env.save_video(video_file)
+                    with open(reward_file, "w") as f:
+                        f.write(f"{best_eval_reward}\n")
+                    print(
+                        f"  -> New best! Video saved to {video_file}"
+                    )
 
             if is_training:
                 # TensorBoard logging

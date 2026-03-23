@@ -109,6 +109,7 @@ class EvalRenderWrapper(gym.Wrapper):
         self._window_name = window_name
         self._mj_renderer = None
         self._camera = None
+        self._episode_frames = []
         self._is_mujoco = hasattr(env.unwrapped, "model") and hasattr(
             env.unwrapped, "data"
         )
@@ -134,7 +135,11 @@ class EvalRenderWrapper(gym.Wrapper):
         # Copy the exact camera from the env's own viewer (already configured
         # with default_cam_config + correct type). This guarantees the eval
         # display matches the same viewpoint the model was trained on.
-        viewer = getattr(unwrapped.mujoco_renderer, "viewer", None)
+        # Trigger viewer creation if it hasn't been created yet (state envs).
+        mj_rend = getattr(unwrapped, "mujoco_renderer", None)
+        if mj_rend is not None and getattr(mj_rend, "viewer", None) is None:
+            mj_rend.render("rgb_array")
+        viewer = getattr(mj_rend, "viewer", None) if mj_rend else None
         if viewer is not None and hasattr(viewer, "cam"):
             src = viewer.cam
             self._camera = mujoco.MjvCamera()
@@ -176,13 +181,36 @@ class EvalRenderWrapper(gym.Wrapper):
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
-        self._show(self._get_display_frame())
+        frame = self._get_display_frame()
+        if frame is not None:
+            self._episode_frames.append(frame)
+        self._show(frame)
         return obs, reward, terminated, truncated, info
 
     def reset(self, **kwargs):
+        self._episode_frames = []
         result = self.env.reset(**kwargs)
-        self._show(self._get_display_frame())
+        frame = self._get_display_frame()
+        if frame is not None:
+            self._episode_frames.append(frame)
+        self._show(frame)
         return result
+
+    def get_episode_frames(self):
+        return self._episode_frames
+
+    def save_video(self, path, fps=None):
+        """Save recorded episode frames as MP4 video."""
+        if not self._episode_frames:
+            return
+        if fps is None:
+            fps = self.metadata.get("render_fps", 30)
+        h, w = self._episode_frames[0].shape[:2]
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        writer = cv2.VideoWriter(path, fourcc, fps, (w, h))
+        for frame in self._episode_frames:
+            writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+        writer.release()
 
     def close(self):
         if self._mj_renderer is not None:
@@ -222,24 +250,26 @@ class WalkerReward(gym.Wrapper):
 
 def make_state_env(env_id, render=False, seed=42):
 
-    if "Walker2d-v5" in env_id or "Hopper-v5" in env_id:
+    render_mode = "rgb_array" if render else None
+
+    if "Walker2d-v5" in env_id or "Hopper-v5" in env_id or "Humanoid-v5" in env_id:
         env = gym.make(
             env_id,
-            render_mode="human" if render else None,
+            render_mode=render_mode,
             max_episode_steps=20000,
-            # forward
             forward_reward_weight=0.5,
-            # control
             ctrl_cost_weight=0.1,
-            # healthy
             healthy_reward=1.25,
         )
     else:
-        env = gym.make(env_id, render_mode="human" if render else None)
+        env = gym.make(env_id, render_mode=render_mode)
 
     # Discretize actions if needed
     if isinstance(env.action_space, Box):
         env = DiscretizedActionWrapper(env, bins=3)
+
+    if render:
+        env = EvalRenderWrapper(env)
 
     env.action_space.seed(seed)
     env.observation_space.seed(seed)
@@ -255,7 +285,7 @@ def make_pixel_env(env_id, render=False, seed=42):
     """
     obs_size = 84
 
-    if "Walker2d-v5" in env_id or "Hopper-v5" in env_id:
+    if "Walker2d-v5" in env_id or "Hopper-v5" in env_id or "Humanoid-v5" in env_id:
         env = gym.make(
             env_id,
             render_mode="rgb_array",
