@@ -29,11 +29,11 @@ Rainbow DQN achieves **~4x** the reward of vanilla DQN on Hopper and **~3.5x** o
 
 ### Deep Q-Learning (DQN)
 
-The core idea is to approximate the optimal action-value function $Q^{*}(s, a)$ with a neural network $Q(s, a; \theta)$.
+The core idea is to approximate the optimal action-value function $Q^{\ast}(s, a)$ with a neural network $Q(s, a; \theta)$.
 
 **Bellman optimality equation:**
 
-$$Q^{*}(s, a) = \mathbb{E}\left[r + \gamma \max_{a'} Q^{*}(s', a') \mid s, a\right]$$
+$$Q^{\ast}(s, a) = \mathbb{E}\left[r + \gamma \max_{a'} Q^{\ast}(s', a') \mid s, a\right]$$
 
 **TD target** (with target network $\theta^-$):
 
