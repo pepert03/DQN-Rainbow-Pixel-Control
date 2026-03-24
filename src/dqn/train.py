@@ -419,24 +419,24 @@ class DQNAgent:
         rewards = torch.as_tensor(rewards).to(device, dtype=torch.float32)
         dones = torch.as_tensor(dones).to(device, dtype=torch.float32)
 
-        with torch.amp.autocast("cuda", enabled=(device.type == "cuda")):
-            with torch.no_grad():
-                if self.enable_double_dqn:
-                    next_actions = policy_dqn(new_states).argmax(dim=1, keepdim=True)
-                    target_q = (
-                        rewards
-                        + (1 - dones)
-                        * self.discount_factor_g
-                        * target_dqn(new_states).gather(1, next_actions).squeeze()
-                    )
-                else:
-                    target_q = (
-                        rewards
-                        + (1 - dones)
-                        * self.discount_factor_g
-                        * target_dqn(new_states).max(dim=1)[0]
-                    )
+        with torch.no_grad(), torch.amp.autocast("cuda", enabled=(device.type == "cuda")):
+            if self.enable_double_dqn:
+                next_actions = policy_dqn(new_states).argmax(dim=1, keepdim=True)
+                target_q = (
+                    rewards
+                    + (1 - dones)
+                    * self.discount_factor_g
+                    * target_dqn(new_states).gather(1, next_actions).squeeze()
+                )
+            else:
+                target_q = (
+                    rewards
+                    + (1 - dones)
+                    * self.discount_factor_g
+                    * target_dqn(new_states).max(dim=1)[0]
+                )
 
+        with torch.amp.autocast("cuda", enabled=(device.type == "cuda")):
             current_q = policy_dqn(states).gather(1, actions.unsqueeze(1)).squeeze()
             loss = self.loss_fn(current_q, target_q.float())
 

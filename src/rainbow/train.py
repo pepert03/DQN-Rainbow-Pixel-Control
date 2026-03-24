@@ -261,26 +261,32 @@ class RainbowAgent(DQNAgent):
                 td_errors = per_sample_loss.detach()
 
             else:
-                with torch.no_grad():
-                    if self.enable_double_dqn:
-                        # Double DQN: action selection from policy_dqn, value from target_dqn
-                        next_actions = policy_dqn(new_states).argmax(
-                            dim=1, keepdim=True
-                        )
-                        target_q = (
-                            rewards
-                            + (1 - dones)
-                            * gamma_ns
-                            * target_dqn(new_states).gather(1, next_actions).squeeze()
-                        )
-                    else:
-                        target_q = (
-                            rewards
-                            + (1 - dones)
-                            * gamma_ns
-                            * target_dqn(new_states).max(dim=1)[0]
-                        )
+                # Compute target_q in a separate autocast+no_grad scope to avoid
+                # PyTorch autocast weight-caching bug that drops requires_grad
+                # when the same network is used inside no_grad then outside.
+                pass
 
+        if not self.enable_distributional:
+            with torch.no_grad(), torch.amp.autocast("cuda", enabled=(device.type == "cuda")):
+                if self.enable_double_dqn:
+                    next_actions = policy_dqn(new_states).argmax(
+                        dim=1, keepdim=True
+                    )
+                    target_q = (
+                        rewards
+                        + (1 - dones)
+                        * gamma_ns
+                        * target_dqn(new_states).gather(1, next_actions).squeeze()
+                    )
+                else:
+                    target_q = (
+                        rewards
+                        + (1 - dones)
+                        * gamma_ns
+                        * target_dqn(new_states).max(dim=1)[0]
+                    )
+
+            with torch.amp.autocast("cuda", enabled=(device.type == "cuda")):
                 current_q = policy_dqn(states).gather(1, actions.unsqueeze(1)).squeeze()
                 td_errors = current_q - target_q
 
