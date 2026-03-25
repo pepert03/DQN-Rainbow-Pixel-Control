@@ -161,6 +161,87 @@ no_distributional_pixel_hopper:
   enable_distributional: false
   enable_n_step: true
 
+no_prioritized_pixel_hopper:
+  env_id: Hopper-v5
+  obs: pixel # options: pixel, state
+  replay_memory_size: 200000
+  mini_batch_size: 64
+  epsilon_init: 1.0
+  epsilon_decay: 0.999995
+  epsilon_min: 0.01
+  network_sync_rate: 2000
+  learning_rate: 0.0001
+  discount_factor_g: 0.99
+
+  train_frequency: 4
+  enable_double_dqn: true
+  enable_dueling_dqn: true
+  enable_prioritized_replay: false
+  enable_noisy_nets: true
+  enable_distributional: true
+  enable_n_step: true
+
+no_noisy_pixel_hopper:
+  env_id: Hopper-v5
+  obs: pixel # options: pixel, state
+  replay_memory_size: 200000
+  mini_batch_size: 64
+  epsilon_init: 1.0
+  epsilon_decay: 0.999995
+  epsilon_min: 0.01
+  network_sync_rate: 2000
+  learning_rate: 0.0001
+  discount_factor_g: 0.99
+
+  train_frequency: 4
+  enable_double_dqn: true
+  enable_dueling_dqn: true
+  enable_prioritized_replay: true
+  enable_noisy_nets: false
+  enable_distributional: true
+  enable_n_step: true
+
+no_n_step_pixel_hopper:
+  env_id: Hopper-v5
+  obs: pixel # options: pixel, state
+  replay_memory_size: 200000
+  mini_batch_size: 64
+  epsilon_init: 1.0
+  epsilon_decay: 0.999995
+  epsilon_min: 0.01
+  network_sync_rate: 2000
+  learning_rate: 0.0001
+  discount_factor_g: 0.99
+
+  train_frequency: 4
+  enable_double_dqn: true
+  enable_dueling_dqn: true
+  enable_prioritized_replay: true
+  enable_noisy_nets: true
+  enable_distributional: true
+  enable_n_step: false
+
+no_dueling_pixel_hopper:
+  env_id: Hopper-v5
+  obs: pixel # options: pixel, state
+  replay_memory_size: 200000
+  mini_batch_size: 64
+  epsilon_init: 1.0
+  epsilon_decay: 0.999995
+  epsilon_min: 0.01
+  network_sync_rate: 2000
+  learning_rate: 0.0001
+  discount_factor_g: 0.99
+
+  train_frequency: 4
+  enable_double_dqn: true
+  enable_dueling_dqn: false
+  enable_prioritized_replay: true
+  enable_noisy_nets: true
+  enable_distributional: true
+  enable_n_step: true
+
+
 rainbow_pixel_humanoid:
   env_id: Humanoid-v5
   obs: pixel # options: pixel, state
