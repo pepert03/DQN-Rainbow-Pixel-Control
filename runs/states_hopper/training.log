@@ -1,0 +1,122 @@
+03-18 14:08:10: Training starting...
+03-18 14:08:15: New best reward 3755.1 (+4.6%) at episode 39011, saving model...
+03-18 14:08:18: New best reward 5473.6 (+45.8%) at episode 39014, saving model...
+03-18 14:08:33: Checkpoint saved at episode 39100
+03-18 14:08:41: Checkpoint saved at episode 39200
+03-18 14:08:52: Checkpoint saved at episode 39300
+03-18 14:09:01: Checkpoint saved at episode 39400
+03-18 14:09:09: Checkpoint saved at episode 39500
+03-18 14:09:16: Checkpoint saved at episode 39600
+03-18 14:09:24: Checkpoint saved at episode 39700
+03-18 14:09:32: Checkpoint saved at episode 39800
+03-18 14:09:39: Checkpoint saved at episode 39900
+03-18 14:09:47: Checkpoint saved at episode 40000
+03-18 14:09:55: Checkpoint saved at episode 40100
+03-18 14:10:24: New best reward 5596.7 (+2.2%) at episode 40198, saving model...
+03-18 14:10:26: Checkpoint saved at episode 40200
+03-18 14:10:48: New best reward 7960.6 (+42.2%) at episode 40230, saving model...
+03-18 14:11:27: Checkpoint saved at episode 40300
+03-18 14:12:00: Checkpoint saved at episode 40400
+03-18 14:12:08: Checkpoint saved at episode 40500
+03-18 14:12:26: Checkpoint saved at episode 40600
+03-18 14:12:30: New best reward 8610.2 (+8.2%) at episode 40602, saving model...
+03-18 14:12:51: Checkpoint saved at episode 40700
+03-18 14:13:17: New best reward 8644.1 (+0.4%) at episode 40790, saving model...
+03-18 14:13:22: Checkpoint saved at episode 40800
+03-18 14:13:40: Checkpoint saved at episode 40900
+03-18 14:13:54: Checkpoint saved at episode 41000
+03-18 14:14:10: Checkpoint saved at episode 41100
+03-18 14:14:27: Checkpoint saved at episode 41200
+03-18 14:14:41: Checkpoint saved at episode 41300
+03-18 14:14:52: Checkpoint saved at episode 41400
+03-18 14:15:07: Checkpoint saved at episode 41500
+03-18 14:15:25: Checkpoint saved at episode 41600
+03-18 14:15:40: Checkpoint saved at episode 41700
+03-18 14:15:56: Checkpoint saved at episode 41800
+03-18 14:16:18: Checkpoint saved at episode 41900
+03-18 14:16:37: Checkpoint saved at episode 42000
+03-18 14:17:00: Checkpoint saved at episode 42100
+03-18 14:17:19: Checkpoint saved at episode 42200
+03-18 14:17:45: Checkpoint saved at episode 42300
+03-18 14:18:04: Checkpoint saved at episode 42400
+03-18 14:18:27: Checkpoint saved at episode 42500
+03-18 14:19:07: Checkpoint saved at episode 42600
+03-18 14:19:35: Checkpoint saved at episode 42700
+03-18 14:20:04: Checkpoint saved at episode 42800
+03-18 14:20:18: New best reward 9476.0 (+9.6%) at episode 42813, saving model...
+03-18 14:20:44: Checkpoint saved at episode 42900
+03-18 14:21:13: Checkpoint saved at episode 43000
+03-18 14:21:23: New best reward 20162.2 (+112.8%) at episode 43010, saving model...
+03-18 14:21:55: Checkpoint saved at episode 43100
+03-18 14:22:44: Checkpoint saved at episode 43200
+03-18 14:23:44: Checkpoint saved at episode 43300
+03-18 14:24:31: Checkpoint saved at episode 43400
+03-18 14:24:56: New best reward 20907.2 (+3.7%) at episode 43433, saving model...
+03-18 14:25:38: Checkpoint saved at episode 43500
+03-18 14:27:10: Checkpoint saved at episode 43600
+03-18 14:28:13: Checkpoint saved at episode 43700
+03-18 14:29:11: Checkpoint saved at episode 43800
+03-18 14:30:22: Checkpoint saved at episode 43900
+03-18 14:31:23: Checkpoint saved at episode 44000
+03-18 14:32:18: Checkpoint saved at episode 44100
+03-18 14:33:32: Checkpoint saved at episode 44200
+03-18 14:33:58: New best reward 24815.1 (+18.7%) at episode 44224, saving model...
+03-18 14:34:58: Checkpoint saved at episode 44300
+03-18 14:35:41: New best reward 28791.5 (+16.0%) at episode 44360, saving model...
+03-18 14:36:17: Checkpoint saved at episode 44400
+03-18 14:37:20: Checkpoint saved at episode 44500
+03-18 14:37:51: New best reward 30574.1 (+6.2%) at episode 44534, saving model...
+03-18 14:38:47: Checkpoint saved at episode 44600
+03-18 14:40:25: Checkpoint saved at episode 44700
+03-18 14:41:15: Checkpoint saved at episode 44800
+03-18 14:42:05: Checkpoint saved at episode 44900
+03-18 14:43:13: Checkpoint saved at episode 45000
+03-18 14:44:06: Checkpoint saved at episode 45100
+03-18 14:44:41: Checkpoint saved at episode 45200
+03-18 14:45:27: Checkpoint saved at episode 45300
+03-18 14:46:03: Checkpoint saved at episode 45400
+03-18 14:46:53: Checkpoint saved at episode 45500
+03-18 14:47:46: Checkpoint saved at episode 45600
+03-18 14:48:47: Checkpoint saved at episode 45700
+03-18 14:49:46: Checkpoint saved at episode 45800
+03-18 14:50:40: Checkpoint saved at episode 45900
+03-18 14:51:19: Checkpoint saved at episode 46000
+03-18 14:52:06: Checkpoint saved at episode 46100
+03-18 14:53:12: Checkpoint saved at episode 46200
+03-18 14:54:20: Checkpoint saved at episode 46300
+03-18 14:55:30: Checkpoint saved at episode 46400
+03-18 14:56:29: Checkpoint saved at episode 46500
+03-18 14:57:11: Checkpoint saved at episode 46600
+03-18 14:58:05: Checkpoint saved at episode 46700
+03-18 14:59:22: Checkpoint saved at episode 46800
+03-18 15:00:27: Checkpoint saved at episode 46900
+03-18 15:01:50: Checkpoint saved at episode 47000
+03-18 15:02:44: Checkpoint saved at episode 47100
+03-18 15:03:36: Checkpoint saved at episode 47200
+03-18 15:04:37: Checkpoint saved at episode 47300
+03-18 15:05:56: Checkpoint saved at episode 47400
+03-18 15:07:05: Checkpoint saved at episode 47500
+03-18 15:08:03: Checkpoint saved at episode 47600
+03-18 15:09:12: Checkpoint saved at episode 47700
+03-18 15:10:13: Checkpoint saved at episode 47800
+03-18 15:10:53: Checkpoint saved at episode 47900
+03-18 15:11:37: Checkpoint saved at episode 48000
+03-18 15:12:48: Checkpoint saved at episode 48100
+03-18 15:14:01: Checkpoint saved at episode 48200
+03-18 15:14:39: Checkpoint saved at episode 48300
+03-18 15:15:27: Checkpoint saved at episode 48400
+03-18 15:16:28: Checkpoint saved at episode 48500
+03-18 15:17:35: Checkpoint saved at episode 48600
+03-18 15:18:41: Checkpoint saved at episode 48700
+03-18 15:19:49: Checkpoint saved at episode 48800
+03-18 15:21:01: Checkpoint saved at episode 48900
+03-18 15:22:07: Checkpoint saved at episode 49000
+03-18 15:22:47: Checkpoint saved at episode 49100
+03-18 15:23:42: Checkpoint saved at episode 49200
+03-18 15:24:33: Checkpoint saved at episode 49300
+03-18 15:25:58: Checkpoint saved at episode 49400
+03-18 15:26:50: Checkpoint saved at episode 49500
+03-18 15:28:00: Checkpoint saved at episode 49600
+03-18 15:29:00: Checkpoint saved at episode 49700
+03-18 15:29:55: Checkpoint saved at episode 49800
+03-18 15:31:05: Checkpoint saved at episode 49900
