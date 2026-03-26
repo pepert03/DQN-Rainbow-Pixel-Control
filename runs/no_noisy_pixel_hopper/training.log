@@ -1,118 +1,254 @@
-03-25 16:39:45: Training starting...
-03-25 16:39:46: New best reward 18.3 (+nan%) at episode 0, saving model...
-03-25 16:39:47: New best reward 27.5 (+50.4%) at episode 3, saving model...
-03-25 16:39:47: New best reward 29.5 (+7.3%) at episode 7, saving model...
-03-25 16:39:47: New best reward 38.4 (+30.0%) at episode 8, saving model...
-03-25 16:39:48: New best reward 41.7 (+8.5%) at episode 19, saving model...
-03-25 16:39:48: New best reward 66.2 (+58.9%) at episode 26, saving model...
-03-25 16:39:48: New best reward 88.5 (+33.7%) at episode 41, saving model...
-03-25 16:39:51: Checkpoint saved at episode 100
-03-25 16:39:51: New best reward 188.8 (+113.4%) at episode 105, saving model...
-03-25 16:39:55: Checkpoint saved at episode 200
-03-25 16:39:59: Checkpoint saved at episode 300
-03-25 16:40:03: Checkpoint saved at episode 400
-03-25 16:40:09: Checkpoint saved at episode 500
-03-25 16:40:14: Checkpoint saved at episode 600
-03-25 16:40:19: Checkpoint saved at episode 700
-03-25 16:40:24: Checkpoint saved at episode 800
-03-25 16:40:29: Checkpoint saved at episode 900
-03-25 16:40:35: Checkpoint saved at episode 1000
-03-25 16:40:40: Checkpoint saved at episode 1100
-03-25 16:40:46: Checkpoint saved at episode 1200
-03-25 16:40:51: Checkpoint saved at episode 1300
-03-25 16:40:57: Checkpoint saved at episode 1400
-03-25 16:41:01: New best reward 204.0 (+8.1%) at episode 1486, saving model...
-03-25 16:41:02: Checkpoint saved at episode 1500
-03-25 16:41:08: Checkpoint saved at episode 1600
-03-25 16:41:15: Checkpoint saved at episode 1700
-03-25 16:41:21: Checkpoint saved at episode 1800
-03-25 16:41:27: Checkpoint saved at episode 1900
-03-25 16:41:32: Checkpoint saved at episode 2000
-03-25 16:41:39: Checkpoint saved at episode 2100
-03-25 16:41:46: Checkpoint saved at episode 2200
-03-25 16:41:52: Checkpoint saved at episode 2300
-03-25 16:41:59: Checkpoint saved at episode 2400
-03-25 16:42:06: Checkpoint saved at episode 2500
-03-25 16:42:12: Checkpoint saved at episode 2600
-03-25 16:42:20: Checkpoint saved at episode 2700
-03-25 16:42:28: Checkpoint saved at episode 2800
-03-25 16:42:35: Checkpoint saved at episode 2900
-03-25 16:42:38: New best reward 216.8 (+6.3%) at episode 2940, saving model...
-03-25 16:42:43: Checkpoint saved at episode 3000
-03-25 16:42:51: Checkpoint saved at episode 3100
-03-25 16:42:59: Checkpoint saved at episode 3200
-03-25 16:43:01: New best reward 226.5 (+4.4%) at episode 3232, saving model...
-03-25 16:43:05: Checkpoint saved at episode 3300
-03-25 16:43:13: Checkpoint saved at episode 3400
-03-25 16:43:20: Checkpoint saved at episode 3500
-03-25 16:43:28: Checkpoint saved at episode 3600
-03-25 16:43:36: Checkpoint saved at episode 3700
-03-25 16:43:43: New best reward 233.2 (+3.0%) at episode 3783, saving model...
-03-25 16:43:44: Checkpoint saved at episode 3800
-03-25 16:43:54: Checkpoint saved at episode 3900
-03-25 16:44:02: Checkpoint saved at episode 4000
-03-25 16:44:10: Checkpoint saved at episode 4100
-03-25 16:44:20: Checkpoint saved at episode 4200
-03-25 16:44:30: Checkpoint saved at episode 4300
-03-25 16:44:40: Checkpoint saved at episode 4400
-03-25 16:44:49: Checkpoint saved at episode 4500
-03-25 16:44:59: Checkpoint saved at episode 4600
-03-25 16:44:59: New best reward 267.0 (+14.5%) at episode 4605, saving model...
-03-25 16:45:09: Checkpoint saved at episode 4700
-03-25 16:45:19: Checkpoint saved at episode 4800
-03-25 16:45:29: Checkpoint saved at episode 4900
-03-25 16:45:40: Checkpoint saved at episode 5000
-03-25 16:45:51: Checkpoint saved at episode 5100
-03-25 16:46:05: Checkpoint saved at episode 5200
-03-25 16:46:17: Checkpoint saved at episode 5300
-03-25 16:46:30: Checkpoint saved at episode 5400
-03-25 16:46:35: New best reward 281.6 (+5.4%) at episode 5443, saving model...
-03-25 16:46:43: Checkpoint saved at episode 5500
-03-25 16:46:59: Checkpoint saved at episode 5600
-03-25 16:47:03: New best reward 295.2 (+4.9%) at episode 5625, saving model...
-03-25 16:47:13: Checkpoint saved at episode 5700
-03-25 16:47:22: New best reward 373.7 (+26.6%) at episode 5750, saving model...
-03-25 16:47:26: New best reward 404.7 (+8.3%) at episode 5770, saving model...
-03-25 16:47:30: Checkpoint saved at episode 5800
-03-25 16:47:49: New best reward 429.0 (+6.0%) at episode 5893, saving model...
-03-25 16:47:50: Checkpoint saved at episode 5900
-03-25 16:48:06: Checkpoint saved at episode 6000
-03-25 16:48:25: Checkpoint saved at episode 6100
-03-25 16:48:41: Checkpoint saved at episode 6200
-03-25 16:49:00: Checkpoint saved at episode 6300
-03-25 16:49:20: Checkpoint saved at episode 6400
-03-25 16:49:44: New best reward 471.1 (+9.8%) at episode 6483, saving model...
-03-25 16:49:48: Checkpoint saved at episode 6500
-03-25 16:50:11: Checkpoint saved at episode 6600
-03-25 16:50:38: Checkpoint saved at episode 6700
-03-25 16:50:50: New best reward 555.3 (+17.9%) at episode 6742, saving model...
-03-25 16:51:05: Checkpoint saved at episode 6800
-03-25 16:51:37: Checkpoint saved at episode 6900
-03-25 16:51:41: New best reward 662.6 (+19.3%) at episode 6911, saving model...
-03-25 16:52:14: New best reward 760.7 (+14.8%) at episode 6999, saving model...
-03-25 16:52:14: Checkpoint saved at episode 7000
-03-25 16:52:49: Checkpoint saved at episode 7100
-03-25 16:52:59: New best reward 803.4 (+5.6%) at episode 7128, saving model...
-03-25 16:53:10: New best reward 891.3 (+10.9%) at episode 7147, saving model...
-03-25 16:53:37: Checkpoint saved at episode 7200
-03-25 16:53:58: New best reward 924.4 (+3.7%) at episode 7245, saving model...
-03-25 16:54:08: New best reward 955.5 (+3.4%) at episode 7259, saving model...
-03-25 16:54:18: New best reward 979.3 (+2.5%) at episode 7269, saving model...
-03-25 16:54:34: Checkpoint saved at episode 7300
-03-25 16:54:59: New best reward 1130.6 (+15.5%) at episode 7338, saving model...
-03-25 16:55:38: Checkpoint saved at episode 7400
-03-25 16:55:48: New best reward 1340.3 (+18.5%) at episode 7415, saving model...
-03-25 16:56:25: New best reward 1667.0 (+24.4%) at episode 7460, saving model...
-03-25 16:56:32: New best reward 1723.5 (+3.4%) at episode 7465, saving model...
-03-25 16:57:01: Checkpoint saved at episode 7500
-03-25 16:58:19: New best reward 2175.0 (+26.2%) at episode 7579, saving model...
-03-25 16:58:39: Checkpoint saved at episode 7600
-03-25 16:59:45: New best reward 3410.8 (+56.8%) at episode 7654, saving model...
-03-25 17:00:56: Checkpoint saved at episode 7700
-03-25 17:01:45: New best reward 3438.2 (+0.8%) at episode 7721, saving model...
-03-25 17:02:52: New best reward 4266.6 (+24.1%) at episode 7750, saving model...
-03-25 17:04:52: Checkpoint saved at episode 7800
-03-25 17:07:42: Checkpoint saved at episode 7900
-03-25 17:11:10: Checkpoint saved at episode 8000
-03-25 17:12:36: Checkpoint saved at episode 8100
-03-25 17:14:22: Checkpoint saved at episode 8200
+03-26 00:36:41: Training starting...
+03-26 00:36:42: New best reward 16.3 (+nan%) at episode 0, saving model...
+03-26 00:36:42: New best reward 20.7 (+27.0%) at episode 2, saving model...
+03-26 00:36:43: New best reward 29.3 (+41.4%) at episode 4, saving model...
+03-26 00:36:43: New best reward 29.6 (+1.1%) at episode 7, saving model...
+03-26 00:36:43: New best reward 38.2 (+28.9%) at episode 8, saving model...
+03-26 00:36:44: New best reward 44.5 (+16.6%) at episode 19, saving model...
+03-26 00:36:45: New best reward 72.8 (+63.5%) at episode 44, saving model...
+03-26 00:36:47: New best reward 82.1 (+12.7%) at episode 77, saving model...
+03-26 00:36:48: Checkpoint saved at episode 100
+03-26 00:36:50: New best reward 94.0 (+14.5%) at episode 154, saving model...
+03-26 00:36:52: New best reward 99.9 (+6.3%) at episode 199, saving model...
+03-26 00:36:52: Checkpoint saved at episode 200
+03-26 00:36:57: Checkpoint saved at episode 300
+03-26 00:36:58: New best reward 100.2 (+0.2%) at episode 330, saving model...
+03-26 00:37:02: Checkpoint saved at episode 400
+03-26 00:37:07: Checkpoint saved at episode 500
+03-26 00:37:08: New best reward 111.1 (+10.9%) at episode 526, saving model...
+03-26 00:37:11: Checkpoint saved at episode 600
+03-26 00:37:13: New best reward 114.8 (+3.3%) at episode 643, saving model...
+03-26 00:37:15: New best reward 149.2 (+30.0%) at episode 664, saving model...
+03-26 00:37:16: New best reward 150.7 (+1.0%) at episode 683, saving model...
+03-26 00:37:17: Checkpoint saved at episode 700
+03-26 00:37:22: Checkpoint saved at episode 800
+03-26 00:37:27: Checkpoint saved at episode 900
+03-26 00:37:33: Checkpoint saved at episode 1000
+03-26 00:37:38: Checkpoint saved at episode 1100
+03-26 00:37:43: Checkpoint saved at episode 1200
+03-26 00:37:47: New best reward 153.2 (+1.7%) at episode 1281, saving model...
+03-26 00:37:48: Checkpoint saved at episode 1300
+03-26 00:37:50: New best reward 178.2 (+16.3%) at episode 1322, saving model...
+03-26 00:37:55: Checkpoint saved at episode 1400
+03-26 00:38:00: Checkpoint saved at episode 1500
+03-26 00:38:05: Checkpoint saved at episode 1600
+03-26 00:38:11: Checkpoint saved at episode 1700
+03-26 00:38:17: Checkpoint saved at episode 1800
+03-26 00:38:23: Checkpoint saved at episode 1900
+03-26 00:38:29: New best reward 217.4 (+22.0%) at episode 1974, saving model...
+03-26 00:38:30: Checkpoint saved at episode 2000
+03-26 00:38:36: Checkpoint saved at episode 2100
+03-26 00:38:42: Checkpoint saved at episode 2200
+03-26 00:38:48: Checkpoint saved at episode 2300
+03-26 00:38:55: Checkpoint saved at episode 2400
+03-26 00:38:58: New best reward 235.5 (+8.3%) at episode 2446, saving model...
+03-26 00:39:02: Checkpoint saved at episode 2500
+03-26 00:39:08: Checkpoint saved at episode 2600
+03-26 00:39:14: Checkpoint saved at episode 2700
+03-26 00:39:21: Checkpoint saved at episode 2800
+03-26 00:39:28: Checkpoint saved at episode 2900
+03-26 00:39:36: Checkpoint saved at episode 3000
+03-26 00:39:43: Checkpoint saved at episode 3100
+03-26 00:39:52: Checkpoint saved at episode 3200
+03-26 00:40:01: Checkpoint saved at episode 3300
+03-26 00:40:08: Checkpoint saved at episode 3400
+03-26 00:40:16: Checkpoint saved at episode 3500
+03-26 00:40:25: Checkpoint saved at episode 3600
+03-26 00:40:35: Checkpoint saved at episode 3700
+03-26 00:40:43: Checkpoint saved at episode 3800
+03-26 00:40:51: Checkpoint saved at episode 3900
+03-26 00:41:02: Checkpoint saved at episode 4000
+03-26 00:41:12: Checkpoint saved at episode 4100
+03-26 00:41:19: New best reward 261.3 (+11.0%) at episode 4180, saving model...
+03-26 00:41:21: Checkpoint saved at episode 4200
+03-26 00:41:33: Checkpoint saved at episode 4300
+03-26 00:41:44: Checkpoint saved at episode 4400
+03-26 00:41:55: Checkpoint saved at episode 4500
+03-26 00:42:06: Checkpoint saved at episode 4600
+03-26 00:42:16: Checkpoint saved at episode 4700
+03-26 00:42:26: New best reward 272.2 (+4.2%) at episode 4795, saving model...
+03-26 00:42:27: Checkpoint saved at episode 4800
+03-26 00:42:39: Checkpoint saved at episode 4900
+03-26 00:42:51: Checkpoint saved at episode 5000
+03-26 00:43:04: Checkpoint saved at episode 5100
+03-26 00:43:17: Checkpoint saved at episode 5200
+03-26 00:43:19: New best reward 272.4 (+0.1%) at episode 5210, saving model...
+03-26 00:43:31: Checkpoint saved at episode 5300
+03-26 00:43:44: New best reward 292.1 (+7.2%) at episode 5395, saving model...
+03-26 00:43:45: Checkpoint saved at episode 5400
+03-26 00:44:00: Checkpoint saved at episode 5500
+03-26 00:44:15: New best reward 302.8 (+3.7%) at episode 5593, saving model...
+03-26 00:44:16: Checkpoint saved at episode 5600
+03-26 00:44:32: Checkpoint saved at episode 5700
+03-26 00:44:40: New best reward 316.6 (+4.6%) at episode 5746, saving model...
+03-26 00:44:49: Checkpoint saved at episode 5800
+03-26 00:45:08: Checkpoint saved at episode 5900
+03-26 00:45:26: Checkpoint saved at episode 6000
+03-26 00:45:27: New best reward 341.4 (+7.9%) at episode 6005, saving model...
+03-26 00:45:36: New best reward 367.4 (+7.6%) at episode 6043, saving model...
+03-26 00:45:42: New best reward 466.7 (+27.0%) at episode 6073, saving model...
+03-26 00:45:47: Checkpoint saved at episode 6100
+03-26 00:46:04: Checkpoint saved at episode 6200
+03-26 00:46:25: Checkpoint saved at episode 6300
+03-26 00:46:46: Checkpoint saved at episode 6400
+03-26 00:47:08: Checkpoint saved at episode 6500
+03-26 00:47:32: Checkpoint saved at episode 6600
+03-26 00:47:42: New best reward 725.4 (+55.4%) at episode 6638, saving model...
+03-26 00:47:59: Checkpoint saved at episode 6700
+03-26 00:48:29: Checkpoint saved at episode 6800
+03-26 00:49:02: Checkpoint saved at episode 6900
+03-26 00:49:42: Checkpoint saved at episode 7000
+03-26 00:50:11: New best reward 740.2 (+2.0%) at episode 7068, saving model...
+03-26 00:50:25: Checkpoint saved at episode 7100
+03-26 00:50:52: New best reward 805.4 (+8.8%) at episode 7155, saving model...
+03-26 00:51:11: New best reward 1053.2 (+30.8%) at episode 7193, saving model...
+03-26 00:51:14: Checkpoint saved at episode 7200
+03-26 00:51:51: New best reward 1378.5 (+30.9%) at episode 7261, saving model...
+03-26 00:52:11: New best reward 1495.4 (+8.5%) at episode 7298, saving model...
+03-26 00:52:11: Checkpoint saved at episode 7300
+03-26 00:53:11: New best reward 1693.8 (+13.3%) at episode 7377, saving model...
+03-26 00:53:25: Checkpoint saved at episode 7400
+03-26 00:53:47: New best reward 2215.5 (+30.8%) at episode 7421, saving model...
+03-26 00:55:15: Checkpoint saved at episode 7500
+03-26 00:56:55: Checkpoint saved at episode 7600
+03-26 00:58:37: Checkpoint saved at episode 7700
+03-26 01:00:33: Checkpoint saved at episode 7800
+03-26 01:01:46: New best reward 2361.1 (+6.6%) at episode 7859, saving model...
+03-26 01:02:27: New best reward 2377.4 (+0.7%) at episode 7884, saving model...
+03-26 01:02:54: Checkpoint saved at episode 7900
+03-26 01:03:31: New best reward 2393.9 (+0.7%) at episode 7922, saving model...
+03-26 01:04:56: Checkpoint saved at episode 8000
+03-26 01:05:41: New best reward 2402.0 (+0.3%) at episode 8044, saving model...
+03-26 01:06:46: Checkpoint saved at episode 8100
+03-26 01:08:00: Checkpoint saved at episode 8200
+03-26 01:08:55: Checkpoint saved at episode 8300
+03-26 01:09:51: Checkpoint saved at episode 8400
+03-26 01:10:49: Checkpoint saved at episode 8500
+03-26 01:11:43: Checkpoint saved at episode 8600
+03-26 01:12:42: Checkpoint saved at episode 8700
+03-26 01:13:51: Checkpoint saved at episode 8800
+03-26 01:14:50: Checkpoint saved at episode 8900
+03-26 01:16:06: Checkpoint saved at episode 9000
+03-26 01:17:22: Checkpoint saved at episode 9100
+03-26 01:18:36: Checkpoint saved at episode 9200
+03-26 01:20:01: Checkpoint saved at episode 9300
+03-26 01:21:15: Checkpoint saved at episode 9400
+03-26 01:22:37: Checkpoint saved at episode 9500
+03-26 01:23:55: Checkpoint saved at episode 9600
+03-26 01:25:21: Checkpoint saved at episode 9700
+03-26 01:26:42: New best reward 2641.5 (+10.0%) at episode 9767, saving model...
+03-26 01:27:25: Checkpoint saved at episode 9800
+03-26 01:29:10: Checkpoint saved at episode 9900
+03-26 01:30:56: Checkpoint saved at episode 10000
+03-26 01:32:38: New best reward 3428.6 (+29.8%) at episode 10083, saving model...
+03-26 01:33:08: Checkpoint saved at episode 10100
+03-26 01:35:15: Checkpoint saved at episode 10200
+03-26 01:37:22: Checkpoint saved at episode 10300
+03-26 01:38:24: New best reward 3561.2 (+3.9%) at episode 10332, saving model...
+03-26 01:40:08: Checkpoint saved at episode 10400
+03-26 01:42:27: Checkpoint saved at episode 10500
+03-26 01:44:49: Checkpoint saved at episode 10600
+03-26 01:47:56: Checkpoint saved at episode 10700
+03-26 01:50:48: Checkpoint saved at episode 10800
+03-26 01:54:13: Checkpoint saved at episode 10900
+03-26 01:57:51: Checkpoint saved at episode 11000
+03-26 02:01:00: Checkpoint saved at episode 11100
+03-26 02:04:24: Checkpoint saved at episode 11200
+03-26 02:08:23: Checkpoint saved at episode 11300
+03-26 02:12:28: Checkpoint saved at episode 11400
+03-26 02:16:36: Checkpoint saved at episode 11500
+03-26 02:19:48: Checkpoint saved at episode 11600
+03-26 02:24:16: Checkpoint saved at episode 11700
+03-26 02:28:34: Checkpoint saved at episode 11800
+03-26 02:32:49: Checkpoint saved at episode 11900
+03-26 02:37:03: Checkpoint saved at episode 12000
+03-26 02:38:28: New best reward 3719.7 (+4.4%) at episode 12035, saving model...
+03-26 02:41:30: Checkpoint saved at episode 12100
+03-26 02:45:59: Checkpoint saved at episode 12200
+03-26 02:51:09: Checkpoint saved at episode 12300
+03-26 02:55:12: Checkpoint saved at episode 12400
+03-26 02:57:15: New best reward 3760.0 (+1.1%) at episode 12439, saving model...
+03-26 03:00:22: Checkpoint saved at episode 12500
+03-26 03:03:05: New best reward 3768.1 (+0.2%) at episode 12568, saving model...
+03-26 03:04:38: Checkpoint saved at episode 12600
+03-26 03:06:36: New best reward 3985.5 (+5.8%) at episode 12638, saving model...
+03-26 03:09:16: Checkpoint saved at episode 12700
+03-26 03:14:37: Checkpoint saved at episode 12800
+03-26 03:15:02: New best reward 4001.9 (+0.4%) at episode 12808, saving model...
+03-26 03:16:12: New best reward 4082.5 (+2.0%) at episode 12830, saving model...
+03-26 03:19:34: Checkpoint saved at episode 12900
+03-26 03:24:24: Checkpoint saved at episode 13000
+03-26 03:29:30: Checkpoint saved at episode 13100
+03-26 03:35:20: Checkpoint saved at episode 13200
+03-26 03:40:21: Checkpoint saved at episode 13300
+03-26 03:41:51: New best reward 4143.8 (+1.5%) at episode 13338, saving model...
+03-26 03:45:10: Checkpoint saved at episode 13400
+03-26 03:50:48: Checkpoint saved at episode 13500
+03-26 03:55:55: Checkpoint saved at episode 13600
+03-26 04:00:58: Checkpoint saved at episode 13700
+03-26 04:06:59: Checkpoint saved at episode 13800
+03-26 04:11:42: Checkpoint saved at episode 13900
+03-26 04:16:40: Checkpoint saved at episode 14000
+03-26 04:21:19: Checkpoint saved at episode 14100
+03-26 04:26:58: Checkpoint saved at episode 14200
+03-26 04:32:34: Checkpoint saved at episode 14300
+03-26 04:37:36: Checkpoint saved at episode 14400
+03-26 04:43:34: Checkpoint saved at episode 14500
+03-26 04:48:27: Checkpoint saved at episode 14600
+03-26 04:53:48: Checkpoint saved at episode 14700
+03-26 04:58:46: Checkpoint saved at episode 14800
+03-26 05:01:55: New best reward 4150.3 (+0.2%) at episode 14856, saving model...
+03-26 05:04:11: Checkpoint saved at episode 14900
+03-26 05:09:21: Checkpoint saved at episode 15000
+03-26 05:14:49: Checkpoint saved at episode 15100
+03-26 05:19:20: Checkpoint saved at episode 15200
+03-26 05:23:54: Checkpoint saved at episode 15300
+03-26 05:28:34: New best reward 4218.6 (+1.6%) at episode 15372, saving model...
+03-26 05:30:09: Checkpoint saved at episode 15400
+03-26 05:35:17: Checkpoint saved at episode 15500
+03-26 05:40:59: Checkpoint saved at episode 15600
+03-26 05:46:22: Checkpoint saved at episode 15700
+03-26 05:52:46: Checkpoint saved at episode 15800
+03-26 05:58:32: Checkpoint saved at episode 15900
+03-26 06:03:44: Checkpoint saved at episode 16000
+03-26 06:09:08: Checkpoint saved at episode 16100
+03-26 06:13:51: Checkpoint saved at episode 16200
+03-26 06:18:52: Checkpoint saved at episode 16300
+03-26 06:24:56: Checkpoint saved at episode 16400
+03-26 06:30:34: Checkpoint saved at episode 16500
+03-26 06:35:55: Checkpoint saved at episode 16600
+03-26 06:41:29: Checkpoint saved at episode 16700
+03-26 06:47:11: Checkpoint saved at episode 16800
+03-26 06:52:35: Checkpoint saved at episode 16900
+03-26 06:57:41: Checkpoint saved at episode 17000
+03-26 07:02:05: New best reward 4242.6 (+0.6%) at episode 17093, saving model...
+03-26 07:02:30: Checkpoint saved at episode 17100
+03-26 07:08:30: Checkpoint saved at episode 17200
+03-26 07:11:53: New best reward 4248.9 (+0.1%) at episode 17259, saving model...
+03-26 07:13:23: Checkpoint saved at episode 17300
+03-26 07:19:15: Checkpoint saved at episode 17400
+03-26 07:24:30: Checkpoint saved at episode 17500
+03-26 07:29:43: Checkpoint saved at episode 17600
+03-26 07:34:22: Checkpoint saved at episode 17700
+03-26 07:39:11: Checkpoint saved at episode 17800
+03-26 07:44:49: Checkpoint saved at episode 17900
+03-26 07:50:09: Checkpoint saved at episode 18000
+03-26 07:55:23: Checkpoint saved at episode 18100
+03-26 08:00:07: Checkpoint saved at episode 18200
+03-26 08:04:57: Checkpoint saved at episode 18300
+03-26 08:09:33: Checkpoint saved at episode 18400
+03-26 08:14:19: Checkpoint saved at episode 18500
+03-26 08:17:37: Checkpoint saved at episode 18600
+03-26 08:22:20: Checkpoint saved at episode 18700
+03-26 08:27:08: Checkpoint saved at episode 18800
+03-26 08:31:03: Checkpoint saved at episode 18900
+03-26 08:36:07: Checkpoint saved at episode 19000
+03-26 08:39:55: Checkpoint saved at episode 19100
+03-26 08:44:40: Checkpoint saved at episode 19200
+03-26 08:50:09: Checkpoint saved at episode 19300
+03-26 08:54:29: Checkpoint saved at episode 19400
+03-26 08:59:27: Checkpoint saved at episode 19500
+03-26 09:04:55: Checkpoint saved at episode 19600
+03-26 09:10:25: Checkpoint saved at episode 19700
+03-26 09:15:53: Checkpoint saved at episode 19800
+03-26 09:21:09: Checkpoint saved at episode 19900

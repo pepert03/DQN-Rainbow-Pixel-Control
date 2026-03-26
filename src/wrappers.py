@@ -267,7 +267,7 @@ def make_pixel_env(env_id, render=False, seed=42, frozen_joints=None):
             render_mode="rgb_array",
             width=obs_size,
             height=obs_size,
-            max_episode_steps=20000,
+            max_episode_steps=2000,
             forward_reward_weight=0.5,
             ctrl_cost_weight=0.1,
             healthy_reward=1.25,
