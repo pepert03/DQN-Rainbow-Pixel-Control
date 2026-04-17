@@ -1,5 +1,5 @@
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{cwpWithTeaser}[2010/01/30 v2.0 LaTeX2e document class]
+\ProvidesClass{cwpreport2020}[2010/01/30 v2.0 LaTeX2e document class]
 
 %  Journals use two-sided printing.
 %

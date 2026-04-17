@@ -5,12 +5,6 @@ from gymnasium.spaces import Discrete, Box
 from gymnasium.wrappers import FrameStackObservation
 
 
-# Discreize continuous actions n into bins, no need to separete into combinations of actions for each dimension, as the agent will just choose one action at a time
-# Example: For HalfCheetah-v5, action space is Box(-1.0, 1.0, (6,), float32)
-# With bins=3, we create discrete actions for each dimension: [-1.0, 0.0, 1.0]
-# The total number of discrete actions becomes 3x6 = 18
-# but the action 0 is the same for all dimensions so we need to remove duplicates
-# The resulting action space is Discrete(13) with actions
 class DiscretizedActionWrapper(gym.ActionWrapper):
     def __init__(self, env, bins=3):
         super().__init__(env)
@@ -160,9 +154,7 @@ class EvalRenderWrapper(gym.Wrapper):
     def _get_display_frame(self):
         if self._is_mujoco:
             self._init_mj_renderer()
-            self._mj_renderer.update_scene(
-                self.env.unwrapped.data, camera=self._camera
-            )
+            self._mj_renderer.update_scene(self.env.unwrapped.data, camera=self._camera)
             return self._mj_renderer.render()
         # Fallback: upscale the low-res env render
         frame = self.env.render()
@@ -304,5 +296,3 @@ def make_env(env_id, obs_type, render=False, seed=42, frozen_joints=None):
         return make_state_env(env_id, render, seed, frozen_joints)
     else:
         raise ValueError(f"Unsupported obs_type: {obs_type}")
-
-

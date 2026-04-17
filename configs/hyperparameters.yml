@@ -263,6 +263,20 @@ rainbow_pixel_humanoid:
   enable_n_step: true
 
 
+cartpole:
+  env_id: CartPole-v1
+  obs: state # options: pixel, state
+  replay_memory_size: 100000
+  mini_batch_size: 32
+  epsilon_init: 0.3
+  epsilon_decay: 0.99995
+  epsilon_min: 0.05
+  network_sync_rate: 1000
+  learning_rate: 0.0001
+  discount_factor_g: 0.99
+
+  train_frequency: 4
+
 rainbow_cartpole:
   env_id: CartPole-v1
   obs: pixel # options: pixel, state

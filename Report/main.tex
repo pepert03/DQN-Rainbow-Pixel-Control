@@ -1,17 +1,26 @@
+% chktex-file 1
+% chktex-file 3
+% chktex-file 7
+% chktex-file 11
+% chktex-file 13
+% chktex-file 18
+% chktex-file 24
+% chktex-file 32
+% chktex-file 36
+% chktex-file 44
 %\documentclass{cwpreport} % for review/editing/polishing
 %\linespread{1.5}           % for review/editing/polishing
 \documentclass[onecolumn]{cwpreport} % for final draft
 
-% Packages used by default CWP reports built by M8R
+% --- 1. PAQUETES POR DEFECTO DEL REPORTE ---
 \usepackage{times,natbib,amsmath,graphicx,color,amssymb,amsbsy,lineno,setspace,algorithm2e,lipsum}
 
-\usepackage[justification=centering]{caption} % Permite centrar los pies de figura
-\usepackage{hyperref}
-\usepackage{float}
-\usepackage{caption}
+% --- 2. CODIFICACIÓN Y FUENTES ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc} % Ayuda a evitar el warning de "Font shapes not available"
 
-
-% Specific paper formatting for CWP report
+% --- 3. TABLAS, FIGURAS Y DISEÑO ---
+% FIX: Restauramos el formateo original de los márgenes. El paquete 'geometry' rompía el \maketitle
 \setlength{\paperwidth}{8.5in}
 \setlength{\paperheight}{11.0in}
 \setlength{\topmargin}{-0.25in}
@@ -20,26 +29,121 @@
 \setlength{\oddsidemargin}{+.015625in}
 \setlength{\evensidemargin}{+.015625in}
 
-% Final draft only
-% \title[Short Title]{Aprendizaje auto-supervisado de
-% representaciones visuales con SimCLR y
-% evaluación mediante linear probing}
-\title[]{Deep Reinforcement Learning with Value Function Approximation of the Q-Action}
-% for editing/reviewing
-%\title{Measuring wave propagation through an open-pit mine using stereo videos} 
-%\righthead{training data}
-%\lefthead{Rapstine & Sava}
-
-% Final draft only
-\author[]{José Ridruejo Tuñón, Joaquín Mir Macías \& Francisco Javier Ríos 
-\\
-Deep Reinforcement Learning} 
-
-% --- CORRECCIÓN DE MÁRGENES DEL ABSTRACT ---
+\usepackage{float}
 \makeatletter
-\renewcommand{\left@zm}{0pt} % Elimina el margen izquierdo de 10.5pc
+\@ifundefined{abovecaptionskip}{\newlength{\abovecaptionskip}}{}
+\@ifundefined{belowcaptionskip}{\newlength{\belowcaptionskip}}{}
 \makeatother
-% -------------------------------------------
+\setlength{\intextsep}{2pt plus 1pt minus 1pt}
+\setlength{\textfloatsep}{2pt plus 1pt minus 1pt}
+\setlength{\floatsep}{2pt plus 1pt minus 1pt}
+\setlength{\abovecaptionskip}{2pt}
+\setlength{\belowcaptionskip}{0pt}
+\usepackage{hyperref}
+
+% --- FIX: la clase cwpreport redefine figure/table sin argumento opcional,
+%     lo que hace que [H] se imprima como texto. Restauramos las definiciones
+%     estándar de float para que acepten el especificador de posición. ---
+\makeatletter
+\renewenvironment{figure}[1][htbp]{%
+  \let\@makecaption=\GJ@makefigurecaption
+  \@float{figure}[#1]\fstyle@figure
+}{%
+  \end@float
+}
+\renewenvironment{table}[1][htbp]{%
+  \let\@makecaption=\GJ@maketablecaption
+  \@float{table}[#1]\fstyle@table
+}{%
+  \end@float
+}
+% --- FIX: centrar captions de figuras (la clase los alinea a la izquierda) ---
+\long\def\GJ@makefigurecaption#1#2{\vskip 2pt
+ \setbox\@tempboxa\hbox{\reset@font\small{\bf #1.} #2}
+ \ifdim \wd\@tempboxa >\hsize
+  \centering\reset@font\small{\bf #1.} #2\par
+ \else
+   \hbox to\hsize{\hfill\box\@tempboxa\hfill}
+ \fi
+ \vskip 2pt
+}
+\makeatother
+
+% --- 4. ICONOS Y FUENTES DE CÓDIGO ---
+\usepackage{fontawesome5}
+\usepackage{inconsolata}
+
+% --- 5. GRÁFICOS Y CAJAS (tcolorbox, tikz) ---
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+
+% --- CONFIGURACIÓN DE CAJAS PARA CÓDIGO ---
+\newtcbox{\inlinecode}{on line, 
+  boxrule=0pt, boxsep=0pt,
+  left=4pt, right=4pt, top=3pt, bottom=3pt,
+  colback=gray!15, colframe=white,
+  fontupper=\ttfamily, arc=3pt
+}
+
+% Evitar redefinir \texttt globalmente, ya que puede romper macros internas
+% de la clase (por ejemplo en \maketitle). Usar \inlinecode cuando se quiera
+% estilo de caja para código inline.
+
+% Entorno para bloques de código
+\newtcblisting{mycode}[1][]{
+  listing only,
+  listing options={
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    keywordstyle=\color{blue!60!black}\bfseries,
+    stringstyle=\color{green!50!black},
+    commentstyle=\color{gray}\upshape,
+    showstringspaces=false,
+    #1 
+  },
+  colback=gray!12,
+  colframe=gray!25,
+  boxrule=0.5pt, arc=4pt,
+  left=5pt, right=5pt, top=5pt, bottom=5pt
+}
+
+% --- MACROS PARA EL ÁRBOL DE DIRECTORIOS CON TIKZ ---
+\newcommand{\FTdir}{}
+\def\FTdir(#1,#2,#3){%
+  \FTfile(#1,{{\color{black!50!white}\faFolderOpen}\hspace{0.2em}#3})
+  (tmp.west)++(0.8em,-0.4em)node(#2){}
+  (tmp.west)++(1.5em,0)
+  ++(0,-1.3em) 
+}
+
+\newcommand{\FTfile}{}
+\def\FTfile(#1,#2){%
+  node(tmp){}
+  (#1|-tmp)++(0.6em,0)
+  node(tmp)[anchor=west,black]{\ttfamily #2}
+  (#1)|-(tmp.west)
+  ++(0,-1.2em) 
+}
+
+\newcommand{\FTroot}{}
+\def\FTroot{tmp.west}
+% ----------------------------------------------------
+
+% --- CONFIGURACIÓN DEL REPORTE ---
+\title[]{
+    \parbox{0.84\textwidth}{Aprendizaje por refuerzo profundo con aproximación de la función de valor de la acción Q}
+}
+
+\author[]{Jos\'e Ridruejo Tu\~n\'on, Joaqu\'{\i}n Mir Mac\'{\i}as, Francisco Javier R\'ios
+\\
+\mbox{\textnormal{\small\textit{Deep Reinforcement Learning}}}}
+
+% Corrección de márgenes del abstract
+\makeatletter
+\renewcommand{\left@zm}{0pt}
+\makeatother
 
 \makeatletter
 \newenvironment{Repository}{%
@@ -54,56 +158,35 @@ Deep Reinforcement Learning}
 }
 \makeatother
 
-% --- CONFIGURACIÓN DE ENCABEZADO Y PIE DE PÁGINA ---
+% Encabezado y pie de página
 \usepackage{fancyhdr}
 \pagestyle{fancy}
-\fancyhf{} % Borra todos los encabezados y pies de página actuales
-
-% Quitar la línea horizontal del encabezado
+\fancyhf{}
 \renewcommand{\headrulewidth}{0pt} 
-
-% Poner el número de página en el centro del pie de página
 \fancyfoot[C]{\thepage} 
-
-% Para que la primera página (la del título) también tenga el número abajo
 \fancypagestyle{plain}{
   \fancyhf{}
   \fancyfoot[C]{\thepage}
   \renewcommand{\headrulewidth}{0pt}
 }
-% ---------------------------------------------------
 
-% --- Centrado Descripción Imagen ---
-% \makeatletter
-% \long\def\GJ@makefigurecaption#1#2{\vskip 6pt
-%  \setbox\@tempboxa\hbox{\reset@font\small{\bf #1.} #2}
-%  \ifdim \wd\@tempboxa >\hsize
-%   % Si el texto es largo, lo metemos en una caja centrada
-%   \parbox{\hsize}{\centering\reset@font\small{\bf #1.} #2\par}
-%  \else
-%    % Si es corto (una línea), lo centra (esto ya lo hacía la clase original)
-%    \ifst@rredfloat
-%      \hbox to\hsize{\hfill\box\@tempboxa\hfill}
-%    \else
-%      \hbox to\hsize{\hfil\box\@tempboxa\hfil}
-%    \fi
-%  \fi
-%  \vskip 6pt
-% }
-% \makeatother
-% ------
-%\author{Thomas Rapstine, Paul Sava, Ashley Grant, \& Jeff Shragge}
 \begin{document}
-
 \maketitle
 
-% Uncomment for final draft only
-%\setcounter{page}{285}
+\begin{tikzpicture}[remember picture, overlay]
+    % anchor=north east ancla la imagen por su esquina superior derecha.
+    % xshift ajusta el margen derecho (2.5cm es aprox el margen estándar de tu doc)
+    % yshift ajusta la altura desde el borde superior de la página
+    \node[anchor=north east, xshift=-2cm, yshift=-3.0cm] at (current page.north east) {
+    \includegraphics[width=3cm]{../assets/logo.png}
+    };
+\end{tikzpicture}
+
 \journal{}
 
 %% ------------------------------------------------------------
 \begin{abstract}
-    This work investigates Deep Reinforcement Learning (DRL) for visually rich continuous control using MuJoCo tasks from the DeepMind Control Suite accessed via Gymnasium. We first implement a Deep Q-Network (DQN) baseline that learns a visual state representation and an approximate Q-function from RGB observations over a discretized action space. We then extend this baseline to Rainbow DQN, incorporating different improvements. Through experiments on locomotion and obstacle-avoidance tasks, we compare DQN and Rainbow in terms of sample efficiency, learning stability, and exploration, and conduct an ablation study on selected Rainbow components. Our results highlight when advanced DQN variants offer clear benefits over standard DQN in complex visual control environments.
+    Este proyecto consiste en una implementación del algoritmo de DeepMind DQN para entornos de Deep Reinforcement Learning. Se ha desarrollado un código en Python utilizando las librerías de PyTorch, Gymnasium, MuJoCo y DM Control para entrenar los modelos en entornos como Walker2D, Hopper2d y Humanoid. Como input se ha utilizado la imagen RGB que proporciona el entorno para la visualización (también hemos añadido la opción de utilizar el vector de estados de las articulaciones), además se ha discretizado el espacio de acciones ya que DQN es discreto. La segunda parte de este proyecto consiste en la implementacion de una serie de mejoras que agrupadas forman el algoritmo Rainbow DQN que busca arreglar las ineficiencias del algoritmo original. Finalmente se ha hecho un estudio de ablación donde se ha comparado el impacto de cada mejora respecto al algoritmo completo. Los entrenamientos han demostrado una clara ventaja de Rainbow sobre DQN base, consiguiendo un éxito con mucho menos tiempo de entrenamiento.
 \end{abstract}
 
 \begin{keywords}
@@ -115,126 +198,351 @@ Deep Reinforcement Learning}
     \url{https://github.com/pepert03/DQN-Rainbow-Pixel-Control}
 \end{Repository}
 
-\section{Introduction}
+\section{Introducción}
 
-Deep Reinforcement Learning (DRL) deals with high-dimensional state spaces, such as images, which are not feasibly handled with traditional RL methods. This project will revolve around the implementation and analysis of Deep Q-Networks (DQN) and Rainbow DQN, two prominent DRL algorithms that leverage deep neural networks to approximate the action-value function. These will be applied to continuous control tasks in visually rich environments, which deal with the challenge of learning effective policies from raw pixel observations. Specifically, the tasks will be related to locomotion and obstacle avoidance, where agents must learn to move forward while avoiding collisions.
+Antes de explicar la estructura y metodología del proyecto, se va a hacer una breve definición del algoritmo de Deep Q-Networks con sus respectivas fórmulas, después se van a mencionar las 6 mejoras que conforman el algoritmo Rainbow DQN y que supuso una mejora en rendimiento y resultados sobre el original. 
+\subsection{Deep Q-Networks (DQN)}
 
-\subsection{Deep Q-Networks Fundamentals}
-
-In order to understand the implementation of DQN and Rainbow DQN, we must first go through a slim review on the fundamentals of Q-learning. Traditional tabular Q-learning introduces an MDP (Markov Decision Process) where an agent learns to take actions in an environment to maximize cumulative rewards. The Q-function, denoted as $Q(s, a)$, represents the expected return of taking action $a$ in state $s$ and following the optimal policy thereafter. The update rule for Q-learning is given by:
+El Q-learning tabular tradicional utiliza la ecuación de Bellman para actualizar el valor esperado de una acción $a$ en un estado $s$:
 \[
-    Q(s, a) \leftarrow Q(s, a) + \alpha \left( r + \gamma \max_{a'} Q(s', a') - Q(s, a) \right) \footnote{Typically, the learning rate $\alpha$ is often decayed over time to ensure convergence, and the discount factor $\gamma$ is chosen based on the desired balance between immediate and future rewards.}
+    Q(s, a) \leftarrow Q(s, a) + \alpha \left( r + \gamma \max_{a'} Q(s', a') - Q(s, a) \right)
 \]
-where $\alpha$ is the learning rate, $\gamma$ is the discount factor, $r$ is the reward received after taking action $a$ in state $s$, and $s'$ is the next state.
+donde $\alpha$ es el \textit{learning rate} y $\gamma$ el factor de descuento. 
 
-However, in high-dimensional state spaces, such as those involving images, it is infeasible to maintain a Q-table (due to the exponential growth of state-action pairs). This is where Deep Q-Networks come into play, using a neural network to approximate the Q-function. The DQN algorithm \citep{Intro_1_DQN} thus replaces the Q-table with a function approximator, typically a convolutional neural network (CNN) for processing visual inputs. This approximator, denoted as $Q_\theta(s, a)$, is trained (tuning its parameters $\theta$) to minimize the temporal difference error:
+Sin embargo, en entornos complejos donde mantener una tabla con todos los estados es inviable, DQN \citep{DQN} soluciona esto usando una Red Neuronal para aproximar la función Q, denotada como $Q_\theta(s, a)$. Se entrena minimizando el error temporal (TD error):
 \[
     L(\theta) = \mathbb{E}_{s, a, r, s'} \left[ \left( r + \gamma \max_{a'} Q_{\theta^-}(s', a') - Q_\theta(s, a) \right)^2 \right]
 \]
-where $\theta^-$ are the parameters of a target network that is periodically updated to stabilize training.
 
-The DQN algorithm incorporates two stabilizing techniques:
+Para evitar la inestabilidad de las redes neuronales en RL, DQN introdujo dos mecánicas clave:
 \begin{itemize}
-    \item \textbf{Experience Replay:} Instead of learning from consecutive samples, DQN stores past experiences in a replay buffer and samples mini-batches randomly for training:
-          \[
-              \mathcal{D} = \{(s, a, r, s')\}
-          \]
-          This breaks the correlation between consecutive samples and improves data efficiency.
-
-    \item \textbf{Target Network:} A separate target network with parameters $\theta^-$ is used to compute the target Q-values, which is updated less frequently than the main network. This helps to stabilize learning by providing a more consistent target for the Q-value updates. In order to do so, the target is defined as:
-          \[
-              y = r + \gamma \max_{a'} Q_{\theta^-}(s', a')
-          \]
-          and the network parameters $\theta$ are updated to minimize the loss \( L(\theta) = \left( y - Q_\theta(s, a) \right)^2 \).
+    \item \textbf{Experience Replay:} Las transiciones se guardan en un buffer circular $\mathcal{D} = \{(s, a, r, s')\}$ y se muestrean en \textit{batches} aleatorios. Esto rompe la correlación entre muestras consecutivas y reutiliza datos pasados.
+    \item \textbf{Target Network:} Se utiliza una red neuronal separada (con pesos $\theta^-$) para calcular el valor objetivo. Se actualiza copiando los pesos de la red principal cada ciertos \textit{steps}, evitando que el objetivo a perseguir varíe constantemente en cada actualización de gradiente.
 \end{itemize}
-
-These improvements allowed DQN to successfully learn policies from high-dimensional inputs, such as raw pixel observations in Atari games. However, DQN still suffers from issues like overestimation bias and sample inefficiency, which led to the development of Rainbow DQN.
 
 \subsection{Rainbow DQN}
 
-As we have briefly mentioned in the previous section DQN, while being a significant advancement in DRL, suffered from several limitations:
-\begin{itemize}
-    \item \textbf{Overestimation Bias:} The max operator in the target calculation can lead to overestimation of action values, which can destabilize learning.
-    \item \textbf{Sample Inefficiency:} Since all replayed transitions are treated equally, DQN may waste time learning from unimportant experiences.
-    \item \textbf{Lack of Exploration:} DQN typically uses $\epsilon$-greedy exploration, which is often suboptimal and unstable \citep{Intro_1_DQN}.
-\end{itemize}
+Aunque DQN supuso un gran avance, tenía varios problemas: sobreestimación de valores, ineficiencia de muestreo y una exploración basada en $\epsilon$-greedy. Rainbow DQN \citep{Rainbow} propuso unificar 6 mejoras independientes para solucionar estos cuellos de botella:
 
-To address these issues, Rainbow DQN \citep{Intro_2_Rainbow} was proposed as a way to combine several previously independent improvements into a single, stronger DQN variant. The key components of Rainbow DQN include:
 \begin{itemize}
-    \item \textbf{Double Q-learning:} \citep{Intro_2_DDQN} This technique decouples action selection from action evaluation to reduce overestimation bias. The online network is used to select the action via \( a' = \arg\max_{a'} Q_\theta(s', a') \), while the target network is used to evaluate the action's value:
+    \item \textbf{Double DQN:} Separa la selección de la acción de su evaluación para reducir el sesgo de sobreestimación. La red principal (online) elige la mejor acción, pero la \textit{target network} es la encargada de evaluar su valor:
           \[
-              y = r + \gamma \, Q_{\theta^-}(s', a')
+              y = r + \gamma \, Q_{\theta^-}(s', \arg\max_{a'} Q_\theta(s', a'))
           \]
-
-    \item \textbf{Prioritized Experience Replay:} \citep{Intro_2_PER} Instead of sampling transitions uniformly from the replay buffer, this method prioritizes transitions that have a higher temporal difference (TD) error, which are more informative for learning the value function (since they provide more of a surprise to the agent)
-
-    \item \textbf{Dueling Architecture:} \citep{Intro_2_DuelingDQN} This architecture decomposes the Q-function into two separate estimators: one for the state value function \( V(s) \) and another for the advantage function \( A(s, a) \). The Q-value is then computed as:
+    \item \textbf{Prioritized Experience Replay (PER):} En lugar de muestrear aleatoriamente del buffer, da prioridad a las experiencias con mayor TD error, ya que representan resultados inesperados de los que el modelo puede aprender más rápido.
+    \item \textbf{Dueling Architecture:} Divide el final de la red en dos flujos: uno estima el valor del estado $V(s)$ y el otro la ventaja de cada acción respecto a ese estado $A(s, a)$.
           \[
               Q(s, a) = V(s) + A(s, a) - \frac{1}{|\mathcal{A}|} \sum_{a'} A(s, a')
           \]
-          This allows the network to discern between different actions which may have similar values in certain states, improving learning efficiency.
-
-    \item \textbf{n-step Returns:} This technique uses multi-step instead of simple one-step returns to provide a richer learning signal, which can speed up learning by propagating rewards more quickly through the state space.
-
-    \item \textbf{Distributional RL:} Instead of estimating the expected return, this method models the entire distribution of returns, which can capture more information about the uncertainty and variability in the environment.
-
-    \item \textbf{Noisy Networks:} This approach replaces the $\epsilon$-greedy exploration strategy with a parameterized noise added to the network weights, which enables an adaptive exploration strategy that typically leads to better performance and stability.
+          Esto permite al modelo deducir qué estados son valiosos sin necesidad de aprender el efecto individual de cada acción en ellos.
+    \item \textbf{N-step Returns:} Acumula las recompensas obtenidas tras $n$ pasos en lugar de un solo paso. Esto propaga la señal de recompensa mucho más rápido hacia estados pasados, acelerando el aprendizaje.
+    \item \textbf{Distributional RL:} En lugar de predecir un único valor esperado, estima la distribución de probabilidad completa de los retornos. Esto captura la varianza y la incertidumbre estocástica del entorno.
+    \item \textbf{Noisy Nets:} Elimina la exploración heurística ($\epsilon$-greedy) inyectando ruido paramétrico directamente en los pesos de las capas lineales. La red aprende automáticamente a ignorar este ruido a medida que domina el entorno.
 \end{itemize}
 
-As we will replicate in further sections, the authors also performed an ablation study to evaluate the contribution of each component, demonstrating that the combination of these techniques leads to significant performance improvements over the original DQN across a variety of Atari games. Thus, one of the main goals of this project will be to implement Rainbow DQN and perform a similar ablation study to understand the impact of each component in the context of continuous control tasks with visual inputs (studying specially the possible differences with respect to the authors' results).
+\section{Estructura del proyecto}
 
-\subsection{Environments: MuJoCo and Deepmind Control Suite}
+\begin{center}
+    \begin{tcolorbox}[colback=red!5!white,colframe=red!5!black]
+        Todos los modelos se han entrenado en Linux Ubuntu. Creemos que por diferencias en el renderizado entre sistemas operativos, los modelos tienen un rendimiento inferior cuando se evaluan en Windows.
+    \end{tcolorbox}
+\end{center}
 
-It would be possible to implement DQN and Rainbow DQN in a variety of environments, as well as (given a proper budget) to create our own custom environments. However, for the sake of simplicity and reproducibility, we will focus on some simulation engines that are widely used in the DRL community. Specifically, we will use MuJoCo \citep{Intro_3_MuJoCo}, which stands for \textit{Multi-Joint dynamics with Contact}, a physics engine designed for research in robotics and control. It provides accurate and efficient simulation of complex articulated bodies with contact, collision and friction dynamics. What's more, it supports a myriad of systems, such as walkers, humanoids and quadrupeds, which makes it ideal for testing DRL algorithms in continuous control tasks.
+La estructura del código ha sido la siguiente:
 
-To access MuJoCo environments, we will use the DeepMind Control Suite \citep{Intro_3_DeepMindControlSuite}, which is a collection of standardized benchmarks for DRL algorithms. It provides a set of continuous control tasks with varying levels of difficulty, which are designed to set a standard for evaluating the performance of DRL algorithms.
-\newline In this project, we will focus on the \textbf{HalfCheetah} task \footnote{It must be noted that DPM exposes either low-dimensional state vectors or visual observations. In order to make the project as close to reality, we will work exclusively with RGB observations.}, which involves controlling a two-legged robot to move forward as fast as possible (more on the specific task in the next sections). The reason why we chose this specific task is that it is simple enough for amateurs in MuJoCo and DPM to implement and test their algorithms, while still being complex enough to provide a meaningful challenge for DRL algorithms.
+\begin{center}
+\begin{tikzpicture}%
+  \draw[color=black!50!white, thick]
+  \FTdir(\FTroot,root,.){
+    \FTfile(root,{\color{black!70!white}\faPython}\hspace{0.2em}main.py)
+    \FTdir(root,src,src){
+      \FTfile(src,{\color{black!70!white}\faPython}\hspace{0.2em}buffer.py)
+      \FTfile(src,{\color{black!70!white}\faPython}\hspace{0.2em}networks.py)
+      \FTfile(src,{\color{black!70!white}\faPython}\hspace{0.2em}utils.py)
+      \FTfile(src,{\color{black!70!white}\faPython}\hspace{0.2em}wrappers.py)
+      \FTdir(src,dqn,dqn){
+        \FTfile(dqn,{\color{black!70!white}\faPython}\hspace{0.2em}train.py)
+      }
+      \FTdir(src,rainbow,rainbow){
+        \FTfile(rainbow,{\color{black!70!white}\faPython}\hspace{0.2em}train.py)
+      }
+    }
+  };
+\end{tikzpicture}
+\end{center}
 
-\subsection{Environments Framework: Gymnasium}
+\begin{description}
+    \item[\texttt{main.py}:] Solo se encarga de recibir los parámetros que se pasan en el comando de ejecución, que son el nombre del environment y la flag '--train' para entrenar.
+    \item[\texttt{buffer.py}:] Contiene los dos tipos de buffer que se utilizan en esta práctica: \textit{Experience Replay} y \textit{Prioritized Experience Replay} para Rainbow DQN.
+    \item[\texttt{networks.py}:] Donde están los 3 módulos de PyTorch para el entrenamiento del modelo: el primero (DQN) es el MLP básico para inputs de estados; el siguiente (Pixel\_DQN) es un MLP más una red convolucional para inputs de imágenes; y el último (NoisyLinear) se añade sobre los anteriores como una de las mejoras de Rainbow.
+    \item[\texttt{utils.py}:] Contiene funciones de carga de configuraciones y creación de gráficos.
+    \item[\texttt{wrappers.py}:] Agrupa todos los wrappers utilizados y las funciones de creación de environments. Inicialmente contenía wrappers para rewards personalizados y creación de environments vectorizados para entrenar múltiples en paralelo. Sorprendentemente, la eliminación de estas implementaciones fue lo que consiguió el éxito de los modelos.
+    \item[\texttt{dqn/train.py} y \texttt{rainbow/train.py}:] Contienen el bucle de entrenamiento principal del algoritmo. El primero incluye la clase DQNAgent y el segundo RainbowAgent, que hereda del anterior.
+\end{description}
 
-Last, we must introduce the framework we will use to interact with the environments. Gymnasium \citep{Intro_4_Gymnasium} is a toolkit for developing and comparing reinforcement learning algorithms (successor of OpenAI Gym). It standardizes the interface for RL environments, providing an API that allows agents to interact with a wide variety of environments in a consistent way. This allows agents to be plugged in and tested across different environments without needing to modify the underlying code.
+La estructura de la configuración y guardado de modelos se ha hecho sin utilizar librerías externas como Hydra (que, honestamente, habrían simplificado enormemente el código) y ha sido la siguiente:
 
-Therefore, our stack will consist of:
+\begin{center}
+\begin{tikzpicture}%
+  \draw[color=black!50!white, thick]
+  \FTdir(\FTroot,root,.){
+    \FTdir(root,configs,configs){
+      \FTfile(configs,{\color{black!60!white}\faFileCode}\hspace{0.2em}hyperparameters.yml)
+    }
+    ++(0,-0.5em)
+    \FTdir(root,runs,runs){
+      \FTdir(runs,preset,<preset\_name>){
+        \FTfile(preset,{\color{black!60!white}\faFileCode}\hspace{0.2em}config.yml)
+        \FTfile(preset,{\color{black!60!white}\faCube}\hspace{0.2em}best\_model.pt)
+        \FTfile(preset,{\color{black!60!white}\faCube}\hspace{0.2em}checkpoint.pt)
+        \FTfile(preset,{\color{black!60!white}\faFile}\hspace{0.2em}training.log)
+        \FTfile(preset,{\color{black!60!white}\faImage}\hspace{0.2em}graph.png)
+        \FTdir(preset,tb,tensorboard)
+        \FTdir(preset,eval,eval){
+          \FTfile(eval,{\color{black!60!white}\faFilm}\hspace{0.2em}best.mp4)
+          \FTfile(eval,{\color{black!60!white}\faFile}\hspace{0.2em}best\_reward.txt)
+        }
+      }
+    }
+  };
+\end{tikzpicture}
+\end{center}
+
+La carpeta \texttt{runs} se genera automáticamente; basta con ejecutar un environment configurado en \texttt{hyperparameters.yml}. Un ejemplo de configuración puede ser así:
+
+\begin{mycode}[language=Python]
+rainbow_pixel_walker2d:
+    env_id: Walker2d-v5
+    obs: pixel # options: pixel, state
+    replay_memory_size: 200000
+    mini_batch_size: 64
+    epsilon_decay: 0.999995
+    learning_rate: 0.0001
+\end{mycode}
+
+Para ejecutar un entrenamiento por primera vez, se deberá utilizar el siguiente comando:
+
+\begin{mycode}[language=bash]
+uv sync
+uv run python main.py <preset_name> --train
+\end{mycode}
+
+En este caso, el preset sería \texttt{rainbow\_pixel\_walker2d}. Se generará una carpeta con el mismo nombre en el directorio \texttt{runs/} que contendrá:
+
 \begin{itemize}
-    \item \textbf{Physics Engine:} MuJoCo, which will handle the physics simulation of our environments.
-    \item \textbf{Task Layer (Environments):} DeepMind Control Suite, which provides a set of standardized tasks for testing our algorithms.
-    \item \textbf{Interface Layer:} Gymnasium, by means of its abstractions, will allow us to interact with the environments in a consistent way, providing methods for resetting the environment, taking actions, and receiving observations and rewards.
+    \item Una copia de la configuración (que no recomendamos modificar para evitar errores).
+    \item Un archivo \texttt{checkpoint.pt} que guarda todas las variables y pesos (excepto el \textit{Experience Replay}) cada 100 épocas. Permitirá reanudar el entrenamiento si se llegase a parar (basta con volver a ejecutar el mismo comando), aunque el loop de entrenamiento es infinito.
+    \item Un archivo \texttt{best\_model.pt} que solo contiene la red neuronal y se guarda cuando se supera el \textit{best score}.
+    \item Un archivo de \texttt{training.log}.
+    \item Un gráfico de media de rewards (\texttt{graph.png}) que se actualiza automáticamente durante el entrenamiento.
+    \item Una carpeta de \texttt{tensorboard/} y una de \texttt{eval/} donde se guarda un vídeo de la mejor ejecución.
 \end{itemize}
 
+Para mostrar una visualización del \texttt{best\_model}, hace falta ejecutar en modo evaluación:
 
-\section{Traveling via DQN}
+\begin{mycode}[language=bash]
+uv run python main.py <preset_name>
+\end{mycode}
 
-\subsection{Methodology}
+\section{Aprendizaje con DQN}
 
-\subsection{Results and Discussion}
+\subsection{Metodología}
+Para la implementación, se siguió originalmente la serie de videos de Johnny Code \textit{Implement Deep Q-Learning (DQN) in PyTorch} sobre DQN, aunque luego hubo que adaptar el código al entorno de Mujoco y implementar una CNN ya que el objetivo era procesar imágenes, no estados. Y aunque inicialmente se utilizó el código de los videos como guía, las multiples optimizaciones, reestructuración en módulos y las mejoras de rainbow, ha terminado cambiando completamente la estructura. Lo primero que se implementó fue el environment de cartpole con vector de estados ya que es el "MNIST" de este tipo de problemas de DRL y tarda solo un par de minutos en entrenar. La ejecución está guardada en el directorio \texttt{runs/cartpole} y el video de la mejor ejecución en \texttt{runs/cartpole/eval/best.mp4} (esta misma estructura  aplica a todas las siguientes ejecuciones).
 
-\subsection{Conclusions}
+Una vez completado la arquitectura base se procedió a añadir los cambios principales para conseguir ejecutarlo en Mujoco con observaciones RGB. Primero añadimos la CNN para el procesado de imágenes, y este fue el principal cuello de botella. Por lo que después de varias iteraciones sin buenos resultados, se redujo casi al mínimo numero de capas, se pasó a escala de grises para reducir dimensiones y se hizo un stack de 4 frames para darle al modelo sentido de dirección y de velocidad, y se dejó esta misma estructura para todos los environments:
 
-\section{Traveling via Rainbow-DQN}
+\begin{itemize}
+    \item[] Input: $[B, 4, 84, 84]$ (4 grayscale frames)
+    \item[] $\rightarrow$ Conv2d(4, 32, $8\times8$, stride=4) $\rightarrow$ ReLU
+    \item[] $\rightarrow$ Conv2d(32, 64, $4\times4$, stride=2) $\rightarrow$ ReLU
+    \item[] $\rightarrow$ Conv2d(64, 64, $3\times3$, stride=1) $\rightarrow$ ReLU
+    \item[] $\rightarrow$ Flatten $\rightarrow$ Linear(3136, action\_dim)
+\end{itemize}
 
-\subsection{Methodology}
+Otro cuello de botella fue que inicialmente se renderizaba a máxima calidad para luego hacer downscaling a las dimensiones adecuadas de $84\times84$, esto permitía que a la hora de evaluar se pudiese ver a máxima calidad, sin embargo tener que renderizar tantos pixeles durante el entrenamiento era muy ineficiente. Finalmente se cambió la configuración del environment de Gymnasium para que renderizase nativamente en $84\times84$ mejorando los steps-per-second, aunque esto conllevó tener que hacer wrappers extra para la visualización en alta calidad y probablemente sea la causa de que los modelos tengan peor rendimiento al cambiar de OS en el que se entrenó.
 
-\subsection{Results and Discussion}
+Otro requisito necesario para la ejecución en Mujoco fue la discretización del espacio de acciones. Para ello usamos un wrapper que redujo cada articulación a 3 posibles movimientos $(1, -1, 0)$ y puesto que solo mueve una articulación por step, se puede reducir a dos movimientos por articulación y un estado sin movimiento. Dejando 7 posibles acciones en el entorno de Hopper y 13 en Walker. Inicialmente se probó a permitir que el modelo pueda mover varias articulaciones por step, haciendo un vector de mayor tamaño que representase todas las combinaciones posibles dejando un vector de $(\text{posibles movimientos})^{\text{nº de articulaciones}}$, después de varios días tratando de entrenar algún modelo sin llegar siquiera a hacer un paso se descartó esta idea.
 
-\subsection{Conclusions}
+\subsection{Resultados y discusión}
+Para poder obtener buenos resultados, hubo que modificar el reward predeterminado de los environments. Como ya se ha mencionado antes, inicialmente se probó a hacer un reward desde cero recompensando el avance sin importar la velocidad, recompensando la estabilidad del walker2d calculando el ángulo del torso, simetría de la posición de las piernas... Sin embargo, todo esto dio malos resultados, además de ir en contra del objetivo de RL que es que aprendan a avanzar sin necesidad de dar instrucciones de como hacerlo. Al final la solución mas sencilla fue la más efectiva, solo se modificaron los pesos de los parámetros del reward original:
 
-\section{Ablation Study of Rainbow-DQN}
+\begin{mycode}
+forward_reward_weight=0.5
+ctrl_cost_weight=0.1
+healthy_reward=1.25
+\end{mycode}
 
-\subsection{Methodology}
+Dando más importancia a mantenerse de pie que avanzar, ya que el modelo tendía a lanzarse al suelo. Otra modificación necesaria fue aumentar el numero de steps máximos por episodio ya que también hacía que el modelo tuviera 'prisa' por avanzar. Se aumentó a 20000 que aunque es más que suficiente y puede hacer que el modelo aprenda a mantenerse quieto, dio buenos resultados (aunque a veces encuentra un subóptimo quedándose quieto al inicio hasta que comienza a andar).
 
-\subsection{Results and Discussion}
+Los hiperparámetros elegidos fueron:
 
-\subsection{Conclusions}
+\begin{mycode}
+env_id: Hopper-v5
+obs: pixel
+discount_factor_g: 0.99
+epsilon_decay: 0.999995
+epsilon_init: 1.0
+epsilon_min: 0.01
+learning_rate: 0.0001
+mini_batch_size: 64
+network_sync_rate: 2000
+replay_memory_size: 200000
+\end{mycode}
 
-\section{Traveling in an Environment with Obstacles}
+Y prácticamente son los mismos en todas las configuraciones, ya que dieron buenos resultados en rainbow y con states. El epsilon decay se tuvo que poner cerca del 1 ya que en otro caso caía demasiado rápido. Otro hiperparámetro que dio problemas fue el replay\_memory\_size que si se aumentaba mucho daba errores de memoria de VRAM y aun así se tuvo que quitar del checkpoint ya que también causaba errores.
 
-\subsection{Methodology}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=8cm,height=5cm]{../runs/pixel_hopper/graph.png}
+    \caption{DQN Pixel Hopper: Reward/episode y epsilon/step}
+    \label{fig:dqn_pixel_hopper_graph}
+\end{figure}
 
-\subsection{Results and Discussion}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../runs/pixel_hopper/eval/frames.png}
+    \caption{DQN Pixel Hopper: Mejor modelo (Best reward: 918)}
+    \label{fig:dqn_pixel_hopper}
+\end{figure}
 
-\section{Conclusions}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=8cm,height=5cm]{../runs/pixel_walker2d/graph.png}
+    \caption{DQN Pixel Walker2d: Reward/episode y epsilon/step}
+    \label{fig:dqn_pixel_walker2d_graph}
+\end{figure}
 
-\bibliographystyle{seg}
-\bibliography{references}
-%% ------------------------------------------------------------
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../runs/pixel_walker2d/eval/frames.png}
+    \caption{DQN Pixel Walker2d: Mejor modelo (Best reward: 1683)}
+    \label{fig:dqn_pixel_walker2d}
+\end{figure}
+
+\subsection{Conclusiones}
+Los resultados muestran que el modelo aprende pero es extremadamente lento. La ejecución pixel\_hopper estuvo 15 horas entrenando con un total de 7.000.000 steps y menos de 100.000 episodios y apenas llegaba al final en la mayoría de episodios. Claramente el modelo tenía varios cuellos de botella en el procesado de imágenes ya que entrenando con estados tardaba una fracción de lo que tarda con pixel y en apenas 1 hora el hopper era capaz de llegar al final. Estos fallos e ineficiencias se consiguieron arreglar con la implementación de Rainbow DQN.
+
+\section{Aprendizaje con Rainbow-DQN}
+
+\subsection{Metodología}
+La serie de videos solo llegaba a implementar Double y Dueling DQN. Implementar n-steps, Prioritized Experience Replay y Noisy Nets fue relativamente fácil ya que era poco código o autocontenido en su propia clase.
+
+En cambio, Distributional fue el más difícil ya que afectaba a la salida de las redes, y eso requería cambiar el comportamiento de otras mejoras como Dueling que también cambian la salida, además de tener que añadir la lógica de selección de átomos, proyección de Bellman, función de pérdida y optimización.
+
+En cuanto a optimización, hubo que hacer varios cambios al algoritmo para conseguir acelerar el entrenamiento:
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.5}
+% Usamos 'tabular' normal con 'p' (párrafo) en lugar de 'tabularx'
+\begin{tabular}{l p{10cm}}
+\hline
+\textbf{Optimización} & \textbf{Descripción} \\
+\hline
+Train frequency = 4 & Un paso de gradiente por cada 4 pasos del entorno; reduce el cómputo de entrenamiento mientras se recolectan datos más diversos. \\
+Replay buffer en uint8 & Las observaciones de píxeles se almacenan como uint8 en NumPy y se convierten a float32 solo al transferirse a la GPU para el entrenamiento. \\
+Buffer circular & Uso de arrays de NumPy de tamaño fijo en lugar de listas de Python; elimina la sobrecarga de asignación de memoria por cada muestra. \\
+Entrenamiento AMP & Uso de \textit{torch.amp.autocast} + \textit{GradScaler} en CUDA; \textit{forward pass} se ejecuta en float16, manteniendo gradientes estables en float32. \\
+Entornos vectorizados & Uso de \textit{gymnasium.vector.SyncVectorEnv} para recolección de datos en paralelo; se descartó al no haber mejoras. \\
+\hline
+\end{tabular}
+\end{table}
+
+La mejora principal fue la de train\_frequency que el paper original ya lo hacía, y aceleró $\times 4$ el tiempo de entrenamiento ya que la diferencia entre \textit{steps} no aportaba información nueva para el entrenamiento, además, ya se hacía \textit{frame stacking} de 4 frames por lo que era redundante no saltar 4 \textit{steps}. El que peor resultado dio fue utilizar entornos vectorizados ya que aunque hacía muchos más \textit{steps} por segundo, era mucho más ruidoso y no tenía un aprendizaje constante como con un solo entorno.
+
+\subsection{Resultados y discusión}
+Los hiperparametros utilizados han sido los siguientes:
+
+\begin{mycode}
+n_step: 3
+num_atoms: 51
+v_min: -200.0
+v_max: 200.0
+prioritized_replay_alpha: 0.6
+prioritized_replay_beta: 0.4
+prioritized_replay_beta_increment: 0.0
+prioritized_replay_eps: 1e-6
+sigma_init: 0.5
+\end{mycode}
+
+No ha hecho falta añadirlos en el yaml ya que todos son los predeterminados y han funcionado sin problemas en los entornos de Hopper y Walker aunque para entornos más grandes como el Humanoid a lo mejor habría dado mejores resultados si se hubiera aumentado algún parámetro como el v\_max para acciones con mucha recompensa.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../runs/rainbow_pixel_hopper/eval/frames.png}
+    \caption{Rainbow DQN Pixel Hopper: Gráfica reward/episode y mejor modelo (Best reward: 3692)}
+    \label{fig:rainbow_pixel_hopper}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../runs/rainbow_pixel_walker2d/eval/frames.png}
+    \caption{Rainbow DQN Pixel Walker2d: Gráfica reward/episode y mejor modelo (Best reward: 5847)}
+    \label{fig:rainbow_pixel_walker2d}
+\end{figure}
+
+\subsection{Conclusiones}
+Rainbow DQN finalmente dio muy buenos resultados consiguiendo llegar al final en los entornos de Walker2d y Hopper2d. Por hacer una comparación con los datos previos de Hopper en la DQN, con Rainbow en apenas 30 minutos ya conseguía avanzar hasta el final, con 300.000 \textit{steps} y alrededor de 3.000 episodios.
+
+\section{Estudio de ablación de Rainbow-DQN}
+
+\subsection{Metodología}
+El estudio de ablación ha consistido en la eliminación de una de las mejoras de Rainbow y entrenamiento del environment \texttt{Hopper} durante un tiempo fijo (en la gráfica se muestra alrededor de una hora de entrenamiento, que es cuando Rainbow ha conseguido llegar al final). Se ha hecho el estudio con las 6 mejoras de Rainbow y se han comparado con el \textit{baseline} y el Rainbow completo. Para cada entrenamiento solo ha hecho falta poner un \texttt{false} en alguna de las mejoras en la configuración:
+
+\begin{mycode}
+no_double_pixel_hopper:
+  # omitted
+  enable_double_dqn: false
+  enable_dueling_dqn: true
+  enable_prioritized_replay: true
+  enable_noisy_nets: true
+  enable_distributional: true
+  enable_n_step: true
+\end{mycode}
+
+\subsection{Resultados y discusión}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{../runs/ablation_hopper_rainbow.png}
+    \caption{Ablation study on Hopper comparing Rainbow DQN against variants with one component removed.}
+    \label{fig:ablation_hopper_rainbow}
+\end{figure}
+
+Dado los resultados de la gráfica, se va a proceder a analizar los resultados y tratar de dar una explicación plausible.
+
+\begin{description}
+    \item[Sin Dueling DQN:] Este resultado ha sido inesperado ya que en el paper original Dueling es una de las mejoras que menos afecta al rendimiento, sin embargo, ha sido la ablación con peores resultados en nuestras pruebas. Puede ser que Dueling, al separar el valor de estado y la ventaja de la acción ayuda a estabilizar el entrenamiento y generaliza antes, y 1 hora de entrenamiento no es suficiente para que el resto de mejoras surjan efecto y superen el \textit{baseline}. La segunda teoría es que debe haber un error en la lógica del código que hace que distributional y dueling tengan dependencias y eliminar una de las dos haga que el modelo falle, porque como ya se ha mencionado antes, distributional y dueling modifican la salida de las redes.
+    
+    \item[Sin Distributional RL:] Este resultado se alinea más con los resultados del paper, parece que la eliminación de distributional puede tener un impacto en otras mejoras que se puedan beneficiar de saber la varianza, como podría ser las Noisy Nets. Aunque también puede ser un tema de dependencias con Dueling como ya se ha mencionado, porque las gráficas tienen un rendimiento parecido que hasta empeora el \textit{baseline}.
+    
+    \item[Sin N-step:] Esta es una de las mejoras principales y eliminarla tiene un claro impacto en el numero de steps por segundo, lo cual inevitablemente afecta a las recompensas por episodio. Las actualizaciones de un solo paso tardan demasiado en propagar las recompensas a los estados previos, mientras que el aprendizaje n-step permite que esta señal fluya mucho más rápido.
+    
+    \item[Sin Prioritized Experience Replay:] Otro resultado contradictorio respecto al paper ha sido PER. En la teoría, es una de las mejoras que más impacto tienen en el rendimiento, los resultados obtenidos dicen lo contrario. Es posible que el experimento no sea el más indicado para observar los beneficios de PER; al ser tan sencillo, es posible que el agente aprende antes de que el buffer se llene. También es posible que el beta estático haya capado la capacidad de corregir el Importance Sampling.
+    
+    \item[Sin Noisy Nets:] El impacto de esta mejora no es más moderado en comparación con las anteriores ablaciones. Aunque a que la exploración basada en ruido paramétrico es superior a epsilon-greedy, en entornos pequeños el auto-ajuste de las Noisy Nets en exploración no es tan crítico.
+    
+    \item[Sin Double DQN:] Curiosamente, según el paper, la eliminación de Double DQN es la que menos afecta al rendimiento, llegando en algunos casos a dar mejor resultado que el algoritmo completo. La justificación que dan es que el sesgo de sobreestimación del Q-learning ya está siendo reducido por el uso de Distributional RL, haciendo que la separación entre la selección y la evaluación de la acción pase a ser redundante.
+\end{description}
+
+\subsection{Conclusiones}
+El estudio de ablación confirma que Rainbow no es simplemente un conjunto de mejoras sino que forman una red de pasos que se complementan y dependen entre sí. Y aunque es posible que tenga algunas redundancias, el algoritmo completo demuestra una ventaja enorme respecto al \textit{baseline} y las mejoras independientes.
+
+
+\section{Conclusiones}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../runs/rainbow_pixel_humanoid/eval/frames.png}
+    \caption{Rainbow DQN Pixel Humanoid: Mejor modelo (Best reward: 329)}
+    \label{fig:rainbow_pixel_humanoid}
+\end{figure}
+
+Se han implementado los algoritmos de DQN y Rainbow DQN en Pytorch siguiendo los papers originales, y se ha aplicado a entornos de locomoción de Mujoco con la librería Gymnasium. Se ha conseguido entrenar exitosamente los entornos de Walker y Hopper, demostrando la ventaja de Rainbow sobre DQN. Se han analizado el impacto de las mejoras independientes que componen Rainbow. Como futuras mejoras quedaría conseguir entrenar exitosamente Humanoid: se trató de entrenar haciendo un wrapper de Frozen Joints para reducir la complejidad, pero solo se consiguió que diera un par de pasos. Además habría que probar estos mismos agentes en entornos con obstáculos para conseguir un resultado más robusto.
+
+\nocite{JohnnyCode}
+\bibliographystyle{seg}      % Usa el archivo seg.bst que tienes en tu carpeta
+\bibliography{references}    % Llama a tu archivo references.bib
+
 \end{document}
